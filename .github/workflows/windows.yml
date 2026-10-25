@@ -1,0 +1,72 @@
+name: Windows build and release
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Test editor and shortcuts
+        run: pnpm test
+      - name: Build offline frontend
+        run: pnpm build
+      - name: Build Windows host
+        run: ./build-native.ps1
+      - name: Package and verify extracted application
+        run: |
+          ./package-release.ps1
+          ./verify-release.ps1
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: PageCore-windows-x64
+          path: |
+            PageCore-v*-windows-x64.zip
+            SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v') && github.event_name == 'push'
+    needs: build
+    runs-on: windows-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Download verified package and publish preview release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          if ($env:RELEASE_TAG -ne "v$version") { throw 'Tag must match package.json version' }
+          gh run download $env:RUN_ID --name PageCore-windows-x64 --dir release-assets
+          if ($LASTEXITCODE -ne 0) { throw 'Artifact download failed' }
+          $notes = "docs/RELEASE-v$version.md"
+          if (!(Test-Path -LiteralPath $notes)) { throw 'Release notes are required' }
+          gh release create $env:RELEASE_TAG "release-assets/PageCore-v$version-windows-x64.zip" "release-assets/SHA256SUMS.txt" --title "页核 · PAGECORE v$version" --notes-file $notes --prerelease --verify-tag
+          if ($LASTEXITCODE -ne 0) { throw 'Release publication failed' }

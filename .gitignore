@@ -1,0 +1,17 @@
+node_modules/
+.pnpm-store/
+.runtime/
+release/
+*.zip
+bin/
+dist/
+THIRD-PARTY.json
+THIRD-PARTY-LICENSES.txt
+SHA256SUMS.txt
+preview-*.jpg
+*.miora
+*_assets/
+.env
+.env.*
+*.user
+*.suo

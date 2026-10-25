@@ -1,0 +1,24 @@
+/* Native chrome lives inside the application, with no system title bar. */
+.brand .brand-icon{width:36px;height:36px;background:none;padding:0;display:block;flex:none}
+.window-controls,.window-resizers{display:none}
+.native-window:not(.embedded) .window-controls{display:flex;position:fixed;z-index:120;right:12px;top:14px;height:36px;gap:1px;border-left:1px solid var(--line);padding-left:10px;background:var(--bg)}
+.window-controls button{width:36px;height:36px;color:var(--muted)}
+.window-controls button:hover{color:var(--ink);background:var(--side)}
+.window-controls button[data-window=close]:hover{background:#b9453d;color:#fff}
+.window-controls button svg{width:14px;height:14px;stroke-width:1.2;stroke-linecap:square}
+.restore-glyph{display:none}.window-maximized .restore-glyph{display:block}.window-maximized .maximize-glyph{display:none}
+.native-window:not(.embedded) .app-header{padding-right:150px;user-select:none;touch-action:none;app-region:drag;-webkit-app-region:drag}
+.app-header button,.window-controls,.window-resizers i{app-region:no-drag;-webkit-app-region:no-drag}
+.native-window .app-header .file-heading,.native-window .app-header .brand{cursor:default}
+.native-window.focus:not(.embedded) #leave-focus{right:158px;top:16px}
+.native-window:not(.embedded):not(.window-maximized) .window-resizers{display:block;position:fixed;inset:0;pointer-events:none;z-index:300}
+.window-resizers i{position:absolute;pointer-events:auto;touch-action:none}
+.window-resizers [data-resize=n]{left:9px;right:9px;top:0;height:5px;cursor:n-resize}
+.window-resizers [data-resize=s]{left:9px;right:9px;bottom:0;height:5px;cursor:s-resize}
+.window-resizers [data-resize=w]{left:0;top:9px;bottom:9px;width:5px;cursor:w-resize}
+.window-resizers [data-resize=e]{right:0;top:9px;bottom:9px;width:5px;cursor:e-resize}
+.window-resizers [data-resize=nw]{left:0;top:0;width:9px;height:9px;cursor:nw-resize}
+.window-resizers [data-resize=ne]{right:0;top:0;width:9px;height:9px;cursor:ne-resize}
+.window-resizers [data-resize=sw]{left:0;bottom:0;width:9px;height:9px;cursor:sw-resize}
+.window-resizers [data-resize=se]{right:0;bottom:0;width:9px;height:9px;cursor:se-resize}
+@media(max-width:1080px){.native-window .app-header{gap:15px}.native-window .brand small{display:none}.native-window .file-heading>span:last-child{display:none}.native-window .header-actions{gap:5px}}

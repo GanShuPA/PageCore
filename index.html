@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>页核 · PAGECORE · Markdown 编辑器</title>
+  <link rel="stylesheet" href="app.css">
+  <link rel="icon" href="field-notes.svg" type="image/svg+xml">
+</head>
+<body data-mode="write">
+  <header class="app-header">
+    <div class="brand"><img class="brand-icon" src="field-notes.svg" alt="页核 · PAGECORE"><b>页核<span>PAGECORE</span></b><small>MARKDOWN STUDIO</small></div>
+    <div class="file-heading"><span id="dirty-dot"></span><b id="document-name">欢迎使用.md</b><span id="save-state">准备就绪</span></div>
+    <div class="header-actions"><button data-action="settings" title="设置 Ctrl+," aria-label="设置" aria-haspopup="dialog" aria-controls="settings-dialog" data-icon="settings"></button><button data-action="theme" title="切换明暗主题" aria-label="切换明暗主题" data-icon="sun"></button><button data-action="focus" title="专注写作 F8" aria-label="专注写作" data-icon="focus"></button><button class="primary" data-action="save" title="保存 Ctrl+S"><span data-icon="save"></span>保存</button></div>
+  </header>
+  <div class="window-controls" role="group" aria-label="窗口控制">
+    <button data-window="minimize" title="最小化" aria-label="最小化窗口"><svg viewBox="0 0 16 16"><path d="M3 8h10"/></svg></button>
+    <button data-window="maximize" id="window-maximize" title="最大化" aria-label="最大化窗口"><svg viewBox="0 0 16 16"><path class="maximize-glyph" d="M3.5 3.5h9v9h-9Z"/><path class="restore-glyph" d="M5.5 5.5h7v7h-7ZM3.5 10.5h-1v-8h8v1"/></svg></button>
+    <button data-window="close" title="关闭" aria-label="关闭窗口"><svg viewBox="0 0 16 16"><path d="m4 4 8 8m0-8-8 8"/></svg></button>
+  </div>
+  <div class="window-resizers" aria-hidden="true"><i data-resize="n"></i><i data-resize="s"></i><i data-resize="w"></i><i data-resize="e"></i><i data-resize="nw"></i><i data-resize="ne"></i><i data-resize="sw"></i><i data-resize="se"></i></div>
+  <div class="workspace">
+    <aside id="sidebar">
+      <div class="sidebar-top"><span>工作空间</span><small>01 / LOCAL</small></div>
+      <div class="file-actions"><button data-action="new"><span data-icon="plus"></span>新建文档</button><button data-action="open" title="打开 Ctrl+O"><span data-icon="folder"></span>打开文件</button></div>
+      <div class="sidebar-tabs"><button class="selected" data-side="outline">文档大纲</button><button data-side="recent">最近文件</button></div>
+      <nav id="outline" aria-label="文档大纲"></nav><nav id="recent" aria-label="最近文件" hidden></nav>
+      <div class="sidebar-bottom"><span class="tiny-label">WRITE / THINK / BUILD</span><p>把想法，写成下一步。</p><button data-action="help"><span data-icon="help"></span>使用指南与快捷键</button></div>
+    </aside>
+    <main>
+      <div class="document-bar"><div class="breadcrumb"><span data-icon="file"></span><span id="document-path">本地工作空间 / 欢迎使用.md</span></div><div class="view-switch" role="group" aria-label="编辑模式"><button data-mode="write" class="selected" title="直接编辑排版后的正文">写作</button><button data-mode="split" title="Markdown 源码与预览">分栏</button><button data-mode="source">源码</button><button data-mode="read">阅读</button></div></div>
+      <div class="toolbar" role="toolbar" aria-label="格式工具栏">
+        <button data-format="h1" title="一级标题">H₁</button><button data-format="h2" title="二级标题">H₂</button><i></i>
+        <button data-format="bold" class="shortcut-button" aria-label="加粗，快捷键 Ctrl+B" aria-keyshortcuts="Control+b" aria-describedby="bold-tooltip"><b>B</b><span class="shortcut-tooltip" id="bold-tooltip" role="tooltip">加粗 <kbd>Ctrl+B</kbd></span></button><button data-format="italic" class="shortcut-button" aria-label="斜体，快捷键 Ctrl+I" aria-keyshortcuts="Control+i" aria-describedby="italic-tooltip"><em>I</em><span class="shortcut-tooltip" id="italic-tooltip" role="tooltip">斜体 <kbd>Ctrl+I</kbd></span></button><button data-format="strike" title="删除线"><s>S</s></button><i></i>
+        <button data-format="bullet" title="无序列表" data-icon="list"></button><button data-format="task" title="任务列表" data-icon="check"></button><button data-format="quote" title="引用" data-icon="quote"></button><button data-format="code" title="代码块" data-icon="code"></button><button data-format="table" title="插入表格" data-icon="table"></button><button data-format="link" title="插入链接" data-icon="link"></button><button data-action="image" title="插入图片" data-icon="image"></button>
+        <span class="toolbar-space"></span><button data-action="find" title="查找 / 替换 Ctrl+F" data-icon="search"></button><button data-action="save-as" class="text-tool" title="另存为 Ctrl+Shift+S">另存为</button><button data-action="export" class="text-tool" title="导出带排版的 HTML">导出 HTML</button>
+      </div>
+      <div id="recovery-banner" hidden><span>发现上次未保存的草稿。</span><button id="restore-draft">恢复草稿</button><button id="dismiss-draft">保留当前文档</button></div>
+      <div id="editors">
+        <section id="write-pane" class="scroll-pane" aria-label="所见即所得写作区"><div class="paper-eyebrow">页核 · PAGECORE<span>PERSONAL WRITING SPACE</span></div><div id="rich-editor"></div><div class="paper-end">END OF DOCUMENT <span>＋</span></div></section>
+        <section id="source-pane" aria-label="Markdown 源码"><div class="pane-label">MARKDOWN <span>源码编辑</span></div><div id="source-editor"></div></section>
+        <section id="preview-pane" class="scroll-pane" aria-label="文档阅读预览"><div class="pane-label">DOCUMENT <span>实时预览</span></div><article id="preview" class="prose"></article></section>
+      </div>
+      <footer class="statusbar"><span><i class="connection-dot"></i><span id="connection">本地编辑</span></span><span id="encoding">UTF-8 · LF</span><span class="status-spacer"></span><span id="word-count"></span><span id="cursor-position"></span><button id="zoom-out" aria-label="缩小字号">−</button><span id="zoom-label">100%</span><button id="zoom-in" aria-label="放大字号">＋</button></footer>
+    </main>
+  </div>
+  <button id="leave-focus" data-action="focus" hidden>退出专注 · F8</button>
+  <dialog id="settings-dialog" aria-labelledby="settings-title">
+    <div class="dialog-heading"><span class="tiny-label">PAGECORE / PREFERENCES</span><button id="close-settings" aria-label="关闭设置" autofocus>×</button></div>
+    <h2 id="settings-title">设置</h2><p class="settings-intro">调整适合你的写作空间。</p>
+    <div class="settings-tabs" role="tablist" aria-label="设置分类"><button id="appearance-tab" role="tab" aria-selected="true" aria-controls="appearance-panel" data-settings-tab="appearance-panel">外观</button><button id="shortcuts-tab" role="tab" aria-selected="false" aria-controls="shortcuts-panel" tabindex="-1" data-settings-tab="shortcuts-panel">快捷键</button></div>
+    <section id="appearance-panel" role="tabpanel" aria-labelledby="appearance-tab">
+    <div class="setting-row"><label for="setting-theme">界面主题<small>应用于整个编辑器</small></label><select id="setting-theme"><option value="light">浅色</option><option value="dark">深色</option></select></div>
+    <div class="setting-row"><label for="setting-zoom">文字大小<small>写作、源码与阅读视图</small></label><div class="setting-range"><input id="setting-zoom" type="range" min="80" max="150" step="10"><output id="setting-zoom-value" for="setting-zoom">100%</output></div></div>
+    <div class="setting-row"><label for="setting-spacing">正文行距<small>写作与阅读视图</small></label><select id="setting-spacing"><option value="1.6">紧凑 · 1.6</option><option value="1.9">标准 · 1.9</option><option value="2.2">宽松 · 2.2</option></select></div>
+    <div class="settings-footer"><span id="settings-status" role="status">更改即时生效，自动保存在本机。</span><button id="reset-settings">恢复默认</button></div>
+    </section>
+    <section id="shortcuts-panel" role="tabpanel" aria-labelledby="shortcuts-tab" hidden>
+      <p class="shortcut-instructions">点击右侧快捷键，再按下新的组合键。按 Esc 取消。</p>
+      <div id="shortcut-list"></div>
+      <p id="shortcut-status" role="status" aria-live="polite">更改即时生效，自动保存在本机。</p>
+      <div class="shortcut-reset-row"><button id="reset-shortcuts">恢复默认快捷键</button></div>
+    </section>
+    <button class="primary settings-done" id="done-settings">完成</button>
+  </dialog>
+  <dialog id="help-dialog"><div class="dialog-heading"><span class="tiny-label">QUICK GUIDE / 01</span><button id="close-help" aria-label="关闭帮助">×</button></div><h2>让文字，自然成形。</h2><p>写作模式可以直接编辑排版后的正文。输入 <code># + 空格</code> 创建标题，输入 <code>/</code> 呼出插入菜单，选中文字可弹出格式工具。</p><div class="shortcut-grid"><span>新建 / 打开</span><kbd>Ctrl N / O</kbd><span>保存 / 另存为</span><kbd>Ctrl S / Ctrl Shift S</kbd><span>查找与替换（源码）</span><kbd>Ctrl F</kbd><span>撤销 / 重做</span><kbd>Ctrl Z / Ctrl Shift Z</kbd><span>加粗 / 斜体</span><kbd>Ctrl B / I</kbd><span>专注模式</span><kbd>F8</kbd></div><p class="help-note">支持标题、列表、任务、表格、链接、图片、代码块与数学公式。直接编辑可能规范化 Markdown 排版；需要保留原始写法时使用源码模式。草稿恢复不等于保存文件。</p></dialog>
+  <div id="toast" role="status" hidden></div><div id="loading">正在准备写作空间…</div>
+  <input id="open-input" type="file" accept=".md,.markdown,.txt" hidden><input id="image-input" type="file" accept="image/png,image/jpeg,image/gif,image/webp" hidden>
+  <script src="app.js"></script>
+</body></html>
