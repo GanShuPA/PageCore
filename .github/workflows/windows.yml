@@ -25,10 +25,20 @@ jobs:
       - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile
-      - name: Test editor and shortcuts
-        run: pnpm test
+      - name: Check frontend style and unit tests
+        run: pnpm check
+      - name: Check native and PowerShell code style
+        run: |
+          dotnet tool restore
+          if ($LASTEXITCODE -ne 0) { throw 'Formatter restore failed' }
+          dotnet csharpier check native
+          if ($LASTEXITCODE -ne 0) { throw 'C# formatting check failed' }
+          Install-Module PSScriptAnalyzer -RequiredVersion 1.24.0 -Scope CurrentUser -Force
+          ./check-powershell.ps1
       - name: Build offline frontend
         run: pnpm build
+      - name: Test built editor in Microsoft Edge
+        run: pnpm test:browser
       - name: Build Windows host
         run: ./build-native.ps1
       - name: Package and verify extracted application

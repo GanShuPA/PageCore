@@ -10,15 +10,21 @@
 
 ```js
 await window.FieldMarkdown.ready;
-window.FieldMarkdown.getMarkdown();  // 刷新编辑器并返回最新文本
-window.FieldMarkdown.flush();        // 同上；保存或关闭前务必调用
+window.FieldMarkdown.getMarkdown(); // 刷新编辑器并返回最新文本
+window.FieldMarkdown.flush(); // 同上；保存或关闭前务必调用
 await window.FieldMarkdown.setDocument({
-  name: '笔记.md', text: '# 新文档\n', cleanText: '# 新文档\n',
-  path: null, encoding: 'UTF-8', eol: 'LF', assetBase: '', recent: []
+  name: '笔记.md',
+  text: '# 新文档\n',
+  cleanText: '# 新文档\n',
+  path: null,
+  encoding: 'UTF-8',
+  eol: 'LF',
+  assetBase: '',
+  recent: [],
 }); // 有未保存内容时先确认；返回 false 表示取消
 await window.FieldMarkdown.setMode('write'); // write / source / split / read
-window.FieldMarkdown.setTheme(true);        // 深色
-const unsubscribe = window.FieldMarkdown.onChange(markdown => {});
+window.FieldMarkdown.setTheme(true); // 深色
+const unsubscribe = window.FieldMarkdown.onChange((markdown) => {});
 window.FieldMarkdown.focus();
 ```
 
@@ -31,16 +37,16 @@ window.FieldMarkdown.focus();
 即时变更：`{ command: 'changed', text }`，无回复。
 通知：`{ type: 'notice', message }`。
 
-| command | 附加字段 | 返回 data |
-| --- | --- | --- |
-| ready | 无 | `{document, recovery}` |
-| new / open | 无 | 文档对象；取消返回 null |
-| recent | path（仅可选最近列表内的记录） | 文档对象或 null |
-| save / save-as | 无 | 文档对象或 null |
-| restore | 无 | 恢复为副本后的文档对象或 null |
-| dismiss-recovery | 无 | null |
-| export | html | `{path}` 或 null |
-| external | url（http/https） | null |
+| command          | 附加字段                       | 返回 data                     |
+| ---------------- | ------------------------------ | ----------------------------- |
+| ready            | 无                             | `{document, recovery}`        |
+| new / open       | 无                             | 文档对象；取消返回 null       |
+| recent           | path（仅可选最近列表内的记录） | 文档对象或 null               |
+| save / save-as   | 无                             | 文档对象或 null               |
+| restore          | 无                             | 恢复为副本后的文档对象或 null |
+| dismiss-recovery | 无                             | null                          |
+| export           | html                           | `{path}` 或 null              |
+| external         | url（http/https）              | null                          |
 
 文档对象包含 `name, path, text, cleanText, encoding, eol, dirty, assetBase, recent`。保存后更新 cleanText，取消或失败时不得将文档标为已保存。
 

@@ -4,8 +4,8 @@ $version = (Get-Content -LiteralPath (Join-Path $PSScriptRoot 'package.json') -R
 $archivePath = Join-Path $PSScriptRoot "PageCore-v$version-windows-x64.zip"
 $zip = [IO.Compression.ZipFile]::OpenRead($archivePath)
 try {
-    $entries = @($zip.Entries | ForEach-Object { $_.FullName.Replace('\','/') })
-    foreach ($required in @('bin/PageCore.exe','bin/PageCore.exe.config','bin/Microsoft.Web.WebView2.Core.dll','bin/Microsoft.Web.WebView2.WinForms.dll','bin/WebView2Loader.dll','dist/index.html','dist/app.js','dist/app.css','dist/welcome.md','README.md','LICENSE','LICENSE-WebView2.txt','THIRD-PARTY-LICENSES.txt','启动页核.cmd')) {
+    $entries = @($zip.Entries | ForEach-Object { $_.FullName.Replace('\', '/') })
+    foreach ($required in @('bin/PageCore.exe', 'bin/PageCore.exe.config', 'bin/Microsoft.Web.WebView2.Core.dll', 'bin/Microsoft.Web.WebView2.WinForms.dll', 'bin/WebView2Loader.dll', 'dist/index.html', 'dist/app.js', 'dist/app.css', 'dist/welcome.md', 'README.md', 'LICENSE', 'LICENSE-WebView2.txt', 'THIRD-PARTY-LICENSES.txt', '启动页核.cmd')) {
         if ($entries -notcontains "PageCore/$required") { throw "Missing release file: $required" }
     }
     if ($entries | Where-Object { $_ -match '(^|/)(\.runtime|\.git|node_modules|\.pnpm-store)(/|$)|(^|/)\.env|FieldNotes\.exe' }) { throw 'Unexpected development or private data in release' }

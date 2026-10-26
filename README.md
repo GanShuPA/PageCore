@@ -2,17 +2,17 @@
 
 <h1 align="center">页核 · PAGECORE</h1>
 <p align="center">把想法，写成下一步。<br>一款面向 Windows 的本地 Markdown 编辑器。</p>
-<p align="center"><a href="https://github.com/GanShuPA/PageCore-Markdown/releases/tag/v0.1.0">下载 Windows 预览版</a> · <a href="docs/USER-GUIDE.md">使用指南</a> · <a href="docs/EMBEDDING.md">嵌入接口</a> · <a href="CHANGELOG.md">版本记录</a></p>
+<p align="center"><a href="https://github.com/GanShuPA/PageCore-Markdown/releases/tag/v0.2.0">下载 Windows 预览版</a> · <a href="docs/USER-GUIDE.md">使用指南</a> · <a href="docs/EMBEDDING.md">嵌入接口</a> · <a href="CHANGELOG.md">版本记录</a></p>
 
 ![页核写作界面](docs/images/editor.jpg)
 
 页核把即时排版、Markdown 源码和本地文件操作放在一个安静的写作空间里。界面采用浅色工业线条设计、无边框窗口与少量荧光黄点缀，也可切换深色主题。直接在排版后的正文中编辑，让记录与阅读自然衔接。
 
-**当前版本：v0.1.0 预览版 · Windows x64 · MIT**
+**当前版本：v0.2.0 预览版 · Windows x64 · MIT**
 
 ## 下载与启动
 
-1. 前往 [Releases](https://github.com/GanShuPA/PageCore-Markdown/releases/tag/v0.1.0)，下载 **PageCore-v0.1.0-windows-x64.zip**，不要选择仅含源码的 Source code 压缩包。
+1. 前往 [Releases](https://github.com/GanShuPA/PageCore-Markdown/releases/tag/v0.2.0)，下载 **PageCore-v0.2.0-windows-x64.zip**，不要选择仅含源码的 Source code 压缩包。
 2. 将整个压缩包解压到可写目录。
 3. 双击 **启动页核.cmd**，或运行 `bin/PageCore.exe`。可把 `.md` 文件拖到启动文件上打开。
 
@@ -20,30 +20,30 @@
 
 ## 能做什么
 
-| 功能 | 说明 |
-| --- | --- |
+| 功能         | 说明                                                                                      |
+| ------------ | ----------------------------------------------------------------------------------------- |
 | 四种编辑视图 | 写作：直接编辑排版后的正文；分栏：源码与预览并排；源码：精细修改 Markdown；阅读：完整预览 |
-| 日常文档 | 新建、打开、保存、另存为、最近文件、大纲跳转、字数统计 |
-| 内容排版 | 标题、粗体、斜体、删除线、引用、列表、任务、表格、图片、链接、代码与数学公式 |
-| 写作偏好 | 明暗主题、字号、正文行距、专注模式，偏好自动保存在本机 |
-| 自定义快捷键 | 9 项操作可改键，录入时检查冲突，提示与帮助页同步更新，支持恢复默认 |
-| 文档保护 | 未保存确认、原子保存、保存前备份、外部修改检测、异常退出后的草稿恢复 |
-| 文件兼容 | UTF-8 / BOM、UTF-16 LE/BE、GB18030；尽量保留原始编码和换行符 |
-| 导出 | 导出 HTML；文档目录内支持的相对路径图片会嵌入导出文件 |
+| 日常文档     | 新建、打开、保存、另存为、最近文件、大纲跳转、字数统计                                    |
+| 内容排版     | 标题、粗体、斜体、删除线、引用、列表、任务、表格、图片、链接、代码与数学公式              |
+| 写作偏好     | 明暗主题、字号、正文行距、专注模式，偏好自动保存在本机                                    |
+| 自定义快捷键 | 9 项操作可改键，录入时检查冲突，提示与帮助页同步更新，支持恢复默认                        |
+| 文档保护     | 未保存确认、原子保存、保存前备份、外部修改检测、异常退出后的草稿恢复                      |
+| 文件兼容     | UTF-8 / BOM、UTF-16 LE/BE、GB18030；尽量保留原始编码和换行符                              |
+| 导出         | 导出 HTML；文档目录内支持的相对路径图片会嵌入导出文件                                     |
 
 ![快捷键设置](docs/images/shortcuts.jpg)
 
 ### 默认快捷键
 
-| 操作 | 快捷键 |
-| --- | --- |
-| 新建 / 打开 | Ctrl+N / Ctrl+O |
-| 保存 / 另存为 | Ctrl+S / Ctrl+Shift+S |
-| 查找与替换（源码） | Ctrl+F |
-| 加粗 / 斜体 | Ctrl+B / Ctrl+I |
-| 专注模式 | F8 |
-| 打开设置 | Ctrl+, |
-| 撤销 / 重做 | Ctrl+Z / Ctrl+Shift+Z |
+| 操作               | 快捷键                |
+| ------------------ | --------------------- |
+| 新建 / 打开        | Ctrl+N / Ctrl+O       |
+| 保存 / 另存为      | Ctrl+S / Ctrl+Shift+S |
+| 查找与替换（源码） | Ctrl+F                |
+| 加粗 / 斜体        | Ctrl+B / Ctrl+I       |
+| 专注模式           | F8                    |
+| 打开设置           | Ctrl+,                |
+| 撤销 / 重做        | Ctrl+Z / Ctrl+Shift+Z |
 
 在 **设置 → 快捷键** 中点击某项组合键，再按新的组合键即可修改。复制、粘贴、撤销等常用快捷键保留给系统与编辑器，不属于可改键列表。
 
@@ -71,25 +71,27 @@
 
 ```powershell
 pnpm install --frozen-lockfile
-pnpm test
+pnpm check
 pnpm build
 powershell -NoProfile -ExecutionPolicy Bypass -File .\build-native.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\package-release.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\verify-release.ps1
 ```
 
-打包输出 `PageCore-v0.1.0-windows-x64.zip` 和 `SHA256SUMS.txt`。验证脚本检查压缩包内容，并从新解压目录运行原生文件会话自检。GitHub Actions 在推送和 PR 时执行测试、构建及打包验证；推送版本标签时另行建立预发布 Release。
+打包输出 `PageCore-v0.2.0-windows-x64.zip` 和 `SHA256SUMS.txt`。验证脚本检查压缩包内容，并从新解压目录运行原生文件会话自检。GitHub Actions 在推送和 PR 时执行测试、构建及打包验证；推送版本标签时另行建立预发布 Release。
 
 图标生成脚本需要 `sharp`，可将 `FIELD_SHARP_PATH` 指向本机模块目录后执行 `node build-icon.cjs`。正常构建直接使用仓库内已生成的 ICO，不需要图标生成依赖。
 
-| 目录 | 内容 |
-| --- | --- |
-| `src/` | 编辑器、排版渲染、偏好与快捷键 |
-| `native/` | WinForms + WebView2 宿主、本地文件会话与窗口控制 |
-| `assets/` | SVG 原图与 Windows 多尺寸图标 |
-| `tests/` | Markdown 渲染、内容过滤及快捷键回归测试 |
-| `docs/` | 使用指南、截图、嵌入协议、发布说明 |
-| `vendor/webview2/` | 固定版本 SDK 组件及第三方许可 |
+| 目录               | 内容                                             |
+| ------------------ | ------------------------------------------------ |
+| `src/`             | 编辑器、排版渲染、偏好与快捷键                   |
+| `native/`          | WinForms + WebView2 宿主、本地文件会话与窗口控制 |
+| `assets/`          | SVG 原图与 Windows 多尺寸图标                    |
+| `tests/`           | Markdown 渲染、内容过滤及快捷键回归测试          |
+| `docs/`            | 使用指南、截图、嵌入协议、发布说明               |
+| `vendor/webview2/` | 固定版本 SDK 组件及第三方许可                    |
+
+详细的模块边界、格式规则和完整检查命令见 [开发规范](docs/DEVELOPMENT.md)。
 
 ## 许可与致谢
 
