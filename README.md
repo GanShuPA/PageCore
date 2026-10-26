@@ -2,7 +2,7 @@
 
 <h1 align="center">页核 · PAGECORE</h1>
 <p align="center">把想法，写成下一步。<br>一款面向 Windows 的本地 Markdown 编辑器。</p>
-<p align="center"><a href="https://github.com/GanShuPA/PageCore/releases/tag/v0.1.0">下载 Windows 预览版</a> · <a href="docs/USER-GUIDE.md">使用指南</a> · <a href="docs/EMBEDDING.md">嵌入接口</a> · <a href="CHANGELOG.md">版本记录</a></p>
+<p align="center"><a href="https://github.com/GanShuPA/PageCore-Markdown/releases/tag/v0.1.0">下载 Windows 预览版</a> · <a href="docs/USER-GUIDE.md">使用指南</a> · <a href="docs/EMBEDDING.md">嵌入接口</a> · <a href="CHANGELOG.md">版本记录</a></p>
 
 ![页核写作界面](docs/images/editor.jpg)
 
@@ -12,7 +12,7 @@
 
 ## 下载与启动
 
-1. 前往 [Releases](https://github.com/GanShuPA/PageCore/releases/tag/v0.1.0)，下载 **PageCore-v0.1.0-windows-x64.zip**，不要选择仅含源码的 Source code 压缩包。
+1. 前往 [Releases](https://github.com/GanShuPA/PageCore-Markdown/releases/tag/v0.1.0)，下载 **PageCore-v0.1.0-windows-x64.zip**，不要选择仅含源码的 Source code 压缩包。
 2. 将整个压缩包解压到可写目录。
 3. 双击 **启动页核.cmd**，或运行 `bin/PageCore.exe`。可把 `.md` 文件拖到启动文件上打开。
 
@@ -95,4 +95,4 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\verify-release.ps1
 
 项目代码按 [MIT License](LICENSE) 发布。编辑器使用 Milkdown / Crepe、CodeMirror、Marked、DOMPurify、KaTeX 和 Microsoft WebView2 等组件，各组件保留自身许可。构建生成 `THIRD-PARTY.json` 和 `THIRD-PARTY-LICENSES.txt`，发布包同时包含 WebView2 许可。
 
-问题反馈请前往 [Issues](https://github.com/GanShuPA/PageCore/issues)，附上版本、复现步骤和经过脱敏的示例文档。
+问题反馈请前往 [Issues](https://github.com/GanShuPA/PageCore-Markdown/issues)，附上版本、复现步骤和经过脱敏的示例文档。

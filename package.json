@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "页核 PAGECORE — a local-first Markdown editor for Windows",
   "license": "MIT",
-  "repository": "github:GanShuPA/PageCore",
+  "repository": "github:GanShuPA/PageCore-Markdown",
   "packageManager": "pnpm@11.25.0",
   "engines": { "node": ">=24.15 <25" },
   "private": true,
