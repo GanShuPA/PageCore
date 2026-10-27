@@ -50,6 +50,8 @@ namespace FieldNotes
                     Sync(m);
                     return;
                 }
+                if (closing)
+                    throw new IOException("正在检查未保存的文档，请稍候。");
                 if (command == "ready")
                 {
                     ready = true;
@@ -72,9 +74,11 @@ namespace FieldNotes
                         if (pendingRecovery == null && File.Exists(DraftPath))
                         {
                             string recovered = File.ReadAllText(DraftPath);
-                            pendingRecovery = json.Deserialize<Dictionary<string, object>>(
-                                recovered
-                            );
+                            pendingRecovery =
+                                new System.Web.Script.Serialization.JavaScriptSerializer
+                                {
+                                    MaxJsonLength = int.MaxValue,
+                                }.Deserialize<Dictionary<string, object>>(recovered);
                             Directory.CreateDirectory(BackupPath);
                             File.WriteAllText(
                                 Path.Combine(
@@ -114,14 +118,10 @@ namespace FieldNotes
                             result = Payload();
                         break;
                     case "new":
-                        if (ConfirmChanges())
-                        {
-                            doc.New("", "未命名.md");
-                            result = ChangedDocument();
-                        }
+                        workspace.New();
+                        result = ChangedDocument();
                         break;
                     case "open":
-                        if (ConfirmChanges())
                         {
                             using (
                                 var dialog = new OpenFileDialog
@@ -133,7 +133,7 @@ namespace FieldNotes
                             {
                                 if (dialog.ShowDialog(this) == DialogResult.OK)
                                 {
-                                    doc.Open(dialog.FileName);
+                                    workspace.Open(dialog.FileName);
                                     result = ChangedDocument();
                                 }
                             }
@@ -143,29 +143,28 @@ namespace FieldNotes
                         var p = Get(m, "path");
                         if (!recent.Contains(p))
                             throw new IOException("此文件不在最近记录中。");
+                        workspace.Open(p);
+                        result = ChangedDocument();
+                        break;
+                    case "select-tab":
+                        workspace.Select(Get(m, "targetId"));
+                        result = ChangedDocument();
+                        break;
+                    case "close-tab":
                         if (ConfirmChanges())
                         {
-                            doc.Open(p);
+                            workspace.CloseActive();
                             result = ChangedDocument();
                         }
                         break;
                     case "restore":
                         if (pendingRecovery == null)
                             throw new IOException("没有可恢复的草稿。");
-                        if (ConfirmChanges())
-                        {
-                            var draft = pendingRecovery;
-                            doc.New(
-                                Get(draft, "text") ?? "",
-                                Path.GetFileName(Get(draft, "name") ?? "恢复草稿.md"),
-                                true
-                            );
-                            pendingRecovery = null;
-                            ConfigureAssets();
-                            UpdateTitle();
-                            PersistDraft();
-                            result = Payload();
-                        }
+                        var restored = new List<object>();
+                        RestoreDrafts(pendingRecovery, restored);
+                        pendingRecovery = null;
+                        ChangedDocument();
+                        result = new { documents = restored.ToArray() };
                         break;
                     case "dismiss-recovery":
                         pendingRecovery = null;

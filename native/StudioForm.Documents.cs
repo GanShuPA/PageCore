@@ -1,6 +1,9 @@
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 
@@ -8,6 +11,30 @@ namespace FieldNotes
 {
     sealed partial class StudioForm
     {
+        void RestoreDrafts(Dictionary<string, object> recovery, List<object> restored)
+        {
+            if (recovery == null)
+                return;
+            object items;
+            if (recovery.TryGetValue("documents", out items) && items is IEnumerable)
+            {
+                foreach (var item in (IEnumerable)items)
+                    RestoreDrafts(item as Dictionary<string, object>, restored);
+            }
+            else if (Get(recovery, "text") != null)
+            {
+                workspace.New(
+                    Get(recovery, "text"),
+                    Path.GetFileName(Get(recovery, "name") ?? "恢复草稿.md"),
+                    true
+                );
+                restored.Add(Payload());
+            }
+            object pending;
+            if (recovery.TryGetValue("pending", out pending))
+                RestoreDrafts(pending as Dictionary<string, object>, restored);
+        }
+
         object ChangedDocument()
         {
             ConfigureAssets();
@@ -60,6 +87,11 @@ namespace FieldNotes
             bool conflict =
                 String.Equals(target, doc.PathName, StringComparison.OrdinalIgnoreCase)
                 && doc.HasExternalChanges();
+            var existing = workspace.FindPath(target);
+            if (existing != null && existing != workspace.Active)
+                throw new IOException(
+                    "此文件已在另一个标签页中打开。请切换到该标签，或选择其他保存路径。"
+                );
             if (
                 conflict
                 && MessageBox.Show(
@@ -124,17 +156,12 @@ namespace FieldNotes
                         try
                         {
                             var u = new Uri(match.Value);
-                            var path = Path.GetFullPath(
-                                Path.Combine(
-                                    assetFolder,
-                                    Uri.UnescapeDataString(u.AbsolutePath)
-                                        .TrimStart('/')
-                                        .Replace('/', Path.DirectorySeparatorChar)
-                                )
-                            );
+                            string relative;
+                            var folder = ResolveAssetFolder(u, out relative);
+                            var path = Path.GetFullPath(Path.Combine(folder, relative));
                             if (
                                 !path.StartsWith(
-                                    assetFolder.TrimEnd('\\') + "\\",
+                                    folder.TrimEnd('\\') + "\\",
                                     StringComparison.OrdinalIgnoreCase
                                 )
                             )
@@ -190,16 +217,28 @@ namespace FieldNotes
             if (closing)
                 return;
             closing = true;
+            var previous = workspace.Active.Id;
             try
             {
                 string raw = await web.CoreWebView2.ExecuteScriptAsync(
-                    "window.FieldMarkdown.flush()"
+                    "window.FieldMarkdown.flushAll()"
                 );
-                string text = json.Deserialize<string>(raw);
-                if (text != null)
-                    doc.Update(text);
-                if (!ConfirmChanges())
-                    return;
+                var snapshots = new System.Web.Script.Serialization.JavaScriptSerializer
+                {
+                    MaxJsonLength = int.MaxValue,
+                }.Deserialize<Dictionary<string, object>[]>(raw);
+                foreach (var snapshot in snapshots)
+                    Sync(snapshot);
+                foreach (var tab in workspace.Tabs.ToArray())
+                {
+                    workspace.Select(tab.Id);
+                    ConfigureAssets();
+                    if (!ConfirmChanges())
+                        return;
+                    await web.CoreWebView2.ExecuteScriptAsync(
+                        "window.FieldMarkdown.markSaved(" + json.Serialize(Payload()) + ")"
+                    );
+                }
                 draftTimer.Stop();
                 if (File.Exists(DraftPath))
                     File.Delete(DraftPath);
@@ -217,6 +256,9 @@ namespace FieldNotes
             }
             finally
             {
+                workspace.Select(previous);
+                ConfigureAssets();
+                UpdateTitle();
                 closing = false;
             }
         }

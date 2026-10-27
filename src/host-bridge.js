@@ -1,5 +1,11 @@
 /** Adapt the embedded host or WebView2 transport to a request/response API. */
-export function createHostBridge({ window, getText, onNotice, onWindowState }) {
+export function createHostBridge({
+  window,
+  getText,
+  getTabId = () => null,
+  onNotice,
+  onWindowState,
+}) {
   const embedded = window.fieldHost;
   const webview = window.chrome?.webview;
   const requests = new Map();
@@ -30,7 +36,7 @@ export function createHostBridge({ window, getText, onNotice, onWindowState }) {
     available: Boolean(embedded || webview),
     isNative: Boolean(webview),
     request(command, extra = {}) {
-      const payload = { text: getText(), ...extra };
+      const payload = { text: getText(), ...(getTabId() ? { tabId: getTabId() } : {}), ...extra };
       if (embedded) {
         return embedded.request(command, payload);
       }
@@ -49,7 +55,11 @@ export function createHostBridge({ window, getText, onNotice, onWindowState }) {
       });
     },
     notifyChange(text) {
-      webview?.postMessage({ command: 'changed', text });
+      webview?.postMessage({
+        command: 'changed',
+        text,
+        ...(getTabId() ? { tabId: getTabId() } : {}),
+      });
     },
     windowCommand(command, extra = {}) {
       webview?.postMessage({ command: `window:${command}`, ...extra });

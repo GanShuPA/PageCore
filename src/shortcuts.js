@@ -3,6 +3,9 @@ export const shortcutCommands = [
   ['open', '打开文件', 'Ctrl+O'],
   ['save', '保存', 'Ctrl+S'],
   ['save-as', '另存为', 'Ctrl+Shift+S'],
+  ['close-tab', '关闭标签页', 'Ctrl+W'],
+  ['next-tab', '下一个标签页', 'Ctrl+Tab'],
+  ['previous-tab', '上一个标签页', 'Ctrl+Shift+Tab'],
   ['find', '查找与替换', 'Ctrl+F'],
   ['bold', '加粗', 'Ctrl+B'],
   ['italic', '斜体', 'Ctrl+I'],
@@ -28,7 +31,6 @@ const reserved = new Set([
   'Ctrl+L',
   'Ctrl+T',
   'Ctrl+Shift+T',
-  'Ctrl+W',
   'Ctrl+Shift+W',
   'Ctrl+P',
   'Ctrl+H',
@@ -42,7 +44,7 @@ export function validShortcut(key) {
   return (
     typeof key === 'string' &&
     !reserved.has(key) &&
-    (/^(Ctrl\+(Shift\+)?([A-Z0-9]|,))$/.test(key) || /^(Ctrl\+)?(Shift\+)?F(2|8|9)$/.test(key))
+    (/^(Ctrl\+(Shift\+)?([A-Z0-9]|,|Tab))$/.test(key) || /^(Ctrl\+)?(Shift\+)?F(2|8|9)$/.test(key))
   );
 }
 export function eventShortcut(e) {
@@ -55,7 +57,7 @@ export function eventShortcut(e) {
       ? e.code.slice(5)
       : e.code === 'Comma'
         ? ','
-        : /^F\d+$/.test(e.key)
+        : /^F\d+$/.test(e.key) || e.key === 'Tab'
           ? e.key
           : e.key?.length === 1
             ? e.key.toUpperCase()
@@ -167,7 +169,7 @@ export function setupShortcuts({ document, storage, run, canRun = () => true }) 
   document.querySelector('#settings-dialog').addEventListener('close', cancel);
   function handleKey(e) {
     if (recording) {
-      if (e.key === 'Tab') {
+      if (e.key === 'Tab' && !e.ctrlKey) {
         cancel();
         announce('已取消修改。');
         return;

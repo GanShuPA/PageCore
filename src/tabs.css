@@ -1,0 +1,65 @@
+.tab-strip {
+  display: flex;
+  flex: none;
+  min-width: 0;
+  height: 40px;
+  border-bottom: 1px solid var(--line);
+  background: var(--side);
+}
+#document-tabs {
+  display: flex;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  flex: 1;
+}
+.document-tab {
+  display: flex;
+  flex: 0 0 auto;
+  min-width: 128px;
+  max-width: 235px;
+  border-right: 1px solid var(--line);
+  border-top: 2px solid transparent;
+  color: var(--muted);
+}
+.document-tab.active {
+  color: var(--ink);
+  background: var(--paper);
+  border-top-color: var(--accent);
+}
+.tab-select {
+  min-width: 0;
+  flex: 1;
+  padding: 0 8px 0 15px;
+  font-size: 12px;
+  justify-content: flex-start;
+}
+.tab-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tab-dirty {
+  width: 5px;
+  height: 5px;
+  background: currentColor;
+  border-radius: 50%;
+  flex: none;
+  visibility: hidden;
+}
+.unsaved .tab-dirty {
+  visibility: visible;
+}
+.tab-close {
+  width: 27px;
+  flex: none;
+  padding: 0;
+  font-size: 18px;
+}
+.tab-add {
+  width: 40px;
+  flex: none;
+  border-left: 1px solid var(--line);
+}
+.focus .tab-strip {
+  display: none;
+}

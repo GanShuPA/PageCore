@@ -32,26 +32,28 @@ window.FieldMarkdown.focus();
 
 默认使用 `window.chrome.webview`。宿主需要在页面脚本运行前注册消息监听，并限制消息来源为自身文档入口。
 
-请求：`{ id: string, command: string, text: string, ...payload }`。
+请求：`{ id: string, command: string, tabId: string, text: string, ...payload }`。`tabId` 是当前标签的稳定标识，首次 ready 请求可省略。
 回复：`{ id, ok: true, data }` 或 `{ id, ok: false, error }`。
-即时变更：`{ command: 'changed', text }`，无回复。
+即时变更：`{ command: 'changed', tabId, text }`，无回复；按 tabId 更新对应会话，不依赖消息到达时的活动标签。
 通知：`{ type: 'notice', message }`。
 
-| command          | 附加字段                              | 返回 data                     |
-| ---------------- | ------------------------------------- | ----------------------------- |
-| ready            | 无                                    | `{document, recovery}`        |
-| new / open       | 无                                    | 文档对象；取消返回 null       |
-| recent           | path（仅可选最近列表内的记录）        | 文档对象或 null               |
-| save / save-as   | 无                                    | 文档对象或 null               |
-| restore          | 无                                    | 恢复为副本后的文档对象或 null |
-| dismiss-recovery | 无                                    | null                          |
-| export           | html                                  | `{path}` 或 null              |
-| export-pdf       | html（已净化的打印排版页面）、options | `{path}` 或 null              |
-| prepare-word     | html（已净化的正文）                  | `{html}`（本地图片已内嵌）    |
-| export-word      | base64（DOCX 文件）                   | `{path}` 或 null              |
-| external         | url（http/https）                     | null                          |
+| command          | 附加字段                               | 返回 data                                 |
+| ---------------- | -------------------------------------- | ----------------------------------------- |
+| ready            | 无                                     | `{document, recovery}`                    |
+| new / open       | 无                                     | 文档对象；取消返回 null                   |
+| recent           | path（仅可选最近列表内的记录）         | 文档对象或 null                           |
+| select-tab       | targetId（目标标签标识）               | 选中后的文档对象                          |
+| close-tab        | 无（关闭当前标签，宿主负责未保存确认） | 邻近或新建空白标签的文档对象；取消为 null |
+| save / save-as   | 无                                     | 文档对象或 null                           |
+| restore          | 无                                     | `{documents: 文档对象数组}`               |
+| dismiss-recovery | 无                                     | null                                      |
+| export           | html                                   | `{path}` 或 null                          |
+| export-pdf       | html（已净化的打印排版页面）、options  | `{path}` 或 null                          |
+| prepare-word     | html（已净化的正文）                   | `{html}`（本地图片已内嵌）                |
+| export-word      | base64（DOCX 文件）                    | `{path}` 或 null                          |
+| external         | url（http/https）                      | null                                      |
 
-文档对象包含 `name, path, text, cleanText, encoding, eol, dirty, assetBase, recent`。保存后更新 cleanText，取消或失败时不得将文档标为已保存。
+文档对象包含 `id, name, path, text, cleanText, encoding, eol, dirty, assetBase, recent`。id 在标签生命周期内保持不变；重复打开同一路径必须返回已有 id。保存后更新 cleanText，取消或失败时不得将文档标为已保存。new/open 不替换旧会话。多标签宿主需实现 select-tab 和 close-tab。
 
 `export-pdf` 由桌面宿主选择保存位置，等待图片和字体加载后生成 PDF；取消返回 null，失败返回错误，成功也不改变 Markdown 的保存状态。`options` 包含 `paper`（A4/A5/Letter）、`orientation`（portrait/landscape）、`marginTop/Bottom/Left/Right`（mm）、`font`（sans/serif/mono）、`fontSize`（pt）、`lineHeight`、`header`、`footer` 和 `pageNumbers`。省略 options 兼容原 A4 默认值。前端使用相同选项生成打印 CSS，宿主校验尺寸并同步设置打印参数。参考 `PdfOptions.cs`、`StudioForm.Pdf.cs` 和 `PdfExporter.cs`。
 
@@ -64,9 +66,9 @@ Word 导出先调用 `prepare-word` 在既有图片目录边界内内嵌本地�
 独立宿主另外支持 `window:drag`、`window:resize`（edge 为 n/s/e/w/ne/nw/se/sw）、`window:minimize`、`window:maximize`、`window:close`，均为无需回复的窗口操作；宿主通过 `{type:'window-state', maximized:boolean}` 通知窗口状态。嵌入模式隐藏这些独立窗口按钮，由桌面外层管理窗口。
 
 1. 新增编辑器窗口，加载 dist 入口；不需要改写编辑器核心。
-2. 每个编辑器窗口绑定自己的 DocumentSession；宿主负责系统文件对话框、最近记录、草稿、保存与关闭确认。
+2. 每个标签绑定自己的 DocumentSession；DocumentWorkspace 管理标签身份和活动会话，宿主负责系统文件对话框、最近记录、草稿、保存与关闭确认。
 3. 保留原子写入和外部修改检查。StudioForm 是完整参考实现。
-4. 仅为当前文档目录内的图片提供读取；禁止借图片路径读取目录外文件。
-5. 桌面切换主题时调用 setTheme。关闭编辑器窗口前调用 flush，再执行未保存检查。
+4. 图片 URL 包含标签 id，按该标签的文档目录读取；禁止借图片路径读取目录外文件。
+5. 桌面切换主题时调用 setTheme。关闭整个窗口前调用 `FieldMarkdown.flushAll()`，获取 `[{tabId, text}]` 并逐一执行未保存检查；保存成功后可调用 `FieldMarkdown.markSaved(document)` 同步相应标签的保存状态。
 
-当前独立应用只支持一个活动文档。多标签需要分别维护文本、路径、撤销栈和保存状态，不能共享一个 DocumentSession。
+页核支持多标签。前端为各标签保留 CodeMirror 与 ProseMirror 的完整编辑状态（包括撤销栈），切换时恢复选区、滚动位置和视图。`setDocument` 仍替换当前标签，`getMarkdown`、`flush`、`onChange` 仍作用于当前标签；文档生命周期由宿主命令管理。

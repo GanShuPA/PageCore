@@ -58,21 +58,30 @@ namespace FieldNotes
             }
         }
 
+        string ResolveAssetFolder(Uri uri, out string relative)
+        {
+            var parts = uri.AbsolutePath.TrimStart('/').Split(new[] { '/' }, 2);
+            var tab = workspace.Find(parts[0]);
+            if (tab == null || tab.Document.PathName == null || parts.Length != 2)
+                throw new IOException("图片所属标签页已关闭或没有文件路径。");
+            relative = Uri.UnescapeDataString(parts[1]).Replace('/', Path.DirectorySeparatorChar);
+            if (Path.IsPathRooted(relative))
+                throw new IOException("图片路径无效。");
+            return Path.GetDirectoryName(tab.Document.PathName);
+        }
+
         void OnResourceRequested(object sender, CoreWebView2WebResourceRequestedEventArgs e)
         {
             var core = web.CoreWebView2;
             try
             {
                 var uri = new Uri(e.Request.Uri);
-                string rel = Uri.UnescapeDataString(uri.AbsolutePath)
-                    .TrimStart('/')
-                    .Replace('/', Path.DirectorySeparatorChar);
-                if (assetFolder == null || Path.IsPathRooted(rel))
-                    throw new IOException();
-                string path = Path.GetFullPath(Path.Combine(assetFolder, rel));
+                string rel;
+                string folder = ResolveAssetFolder(uri, out rel);
+                string path = Path.GetFullPath(Path.Combine(folder, rel));
                 if (
                     !path.StartsWith(
-                        assetFolder.TrimEnd('\\') + "\\",
+                        folder.TrimEnd('\\') + "\\",
                         StringComparison.OrdinalIgnoreCase
                     )
                 )

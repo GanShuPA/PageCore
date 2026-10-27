@@ -109,6 +109,16 @@
         </div>
       </aside>
       <main>
+        <div class="tab-strip">
+          <div id="document-tabs" role="tablist" aria-label="已打开的文档"></div>
+          <button
+            class="tab-add"
+            data-action="new"
+            aria-label="新建标签页"
+            title="新建标签页 Ctrl+N"
+            data-icon="plus"
+          ></button>
+        </div>
         <div class="document-bar">
           <div class="breadcrumb">
             <span data-icon="file"></span>
@@ -184,7 +194,7 @@
           <button id="restore-draft">恢复草稿</button>
           <button id="dismiss-draft">保留当前文档</button>
         </div>
-        <div id="editors">
+        <div id="editors" role="tabpanel">
           <section id="write-pane" class="scroll-pane" aria-label="所见即所得写作区">
             <div class="paper-eyebrow">
               页核 · PAGECORE

@@ -94,3 +94,33 @@ test('transport exceptions reject without breaking subsequent requests', async (
   f.receive({ id: f.sent[0].id, ok: true, data: 'ok' });
   assert.equal(await next, 'ok');
 });
+
+test('native requests and changes carry the originating tab identity', async () => {
+  const sent = [];
+  let receive;
+  let tabId = 'first';
+  const host = createHostBridge({
+    window: {
+      chrome: {
+        webview: {
+          addEventListener(_type, fn) {
+            receive = fn;
+          },
+          postMessage: (m) => sent.push(m),
+        },
+      },
+    },
+    getText: () => '当前内容',
+    getTabId: () => tabId,
+  });
+  host.notifyChange('甲的修改');
+  const selection = host.request('select-tab', { targetId: 'second' });
+  tabId = 'second';
+  host.notifyChange('乙的修改');
+  assert.deepEqual(sent[0], { command: 'changed', text: '甲的修改', tabId: 'first' });
+  assert.equal(sent[1].tabId, 'first');
+  assert.equal(sent[1].targetId, 'second');
+  assert.equal(sent[2].tabId, 'second');
+  receive({ data: { id: sent[1].id, ok: true, data: { id: 'second' } } });
+  assert.deepEqual(await selection, { id: 'second' });
+});

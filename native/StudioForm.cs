@@ -17,7 +17,11 @@ namespace FieldNotes
         {
             MaxJsonLength = DocumentSession.MaxBytes * 3,
         };
-        readonly DocumentSession doc = new DocumentSession();
+        readonly DocumentWorkspace workspace = new DocumentWorkspace();
+        DocumentSession doc
+        {
+            get { return workspace.Active.Document; }
+        }
         readonly List<string> recent = new List<string>();
         readonly Timer draftTimer = new Timer { Interval = 800 };
         readonly string initialPath;
@@ -84,13 +88,16 @@ namespace FieldNotes
             return new
             {
                 name = doc.Name,
+                id = workspace.Active.Id,
                 path = doc.PathName,
                 text = doc.Text,
                 cleanText = doc.CleanText,
                 encoding = doc.Encoding.WebName + (doc.Bom ? " BOM" : ""),
                 eol = doc.Eol == "\r\n" ? "CRLF" : "LF",
                 dirty = doc.Dirty,
-                assetBase = doc.PathName == null ? "" : "https://media.field.local/",
+                assetBase = doc.PathName == null
+                    ? ""
+                    : "https://media.field.local/" + workspace.Active.Id + "/",
                 recent = recent.Select(p => new { name = Path.GetFileName(p), path = p }).ToArray(),
             };
         }
@@ -119,7 +126,11 @@ namespace FieldNotes
             string text = Get(message, "text");
             if (text != null)
             {
-                doc.Update(text);
+                string tabId = Get(message, "tabId");
+                var tab = tabId == null ? workspace.Active : workspace.Find(tabId);
+                if (tab == null)
+                    return;
+                tab.Document.Update(text);
                 UpdateTitle();
                 draftTimer.Stop();
                 draftTimer.Start();
@@ -135,17 +146,21 @@ namespace FieldNotes
         {
             try
             {
-                if (doc.Dirty)
+                var drafts = workspace
+                    .Tabs.Where(t => t.Document.Dirty)
+                    .Select(t => new
+                    {
+                        name = t.Document.Name,
+                        text = t.Document.Text,
+                        path = t.Document.PathName,
+                    })
+                    .ToArray();
+                if (drafts.Length > 0 || pendingRecovery != null)
                     DocumentSession.AtomicWrite(
                         DraftPath,
                         Encoding.UTF8.GetBytes(
-                            json.Serialize(
-                                new
-                                {
-                                    name = doc.Name,
-                                    text = doc.Text,
-                                    path = doc.PathName,
-                                }
+                            new JavaScriptSerializer { MaxJsonLength = int.MaxValue }.Serialize(
+                                new { documents = drafts, pending = pendingRecovery }
                             )
                         ),
                         null

@@ -23,6 +23,7 @@ import { createRenderer, headings, countWords, exportDocument, assetURL } from '
 import { setupShortcuts } from './shortcuts.js';
 import { createPdfDocument } from './pdf-export.js';
 import { setupPdfSettings } from './pdf-settings.js';
+import { createTabBar } from './tab-bar.js';
 import welcome from './welcome.md';
 import '@milkdown/crepe/theme/common/style.css';
 import '@milkdown/crepe/theme/frame.css';
@@ -31,6 +32,7 @@ import './style.css';
 import './window-frame.css';
 import './settings.css';
 import './pdf-settings.css';
+import './tabs.css';
 
 let mdText = welcome;
 let diskText = welcome;
@@ -46,11 +48,15 @@ let paintTimer;
 let recovery = null;
 let ready = false;
 let busy = false;
+let activeTabId = null;
+let untitledCount = 0;
+const tabs = new Map();
 const subscribers = new Set();
 const render = createRenderer(window);
 const host = createHostBridge({
   window,
   getText: flush,
+  getTabId: () => activeTabId,
   onNotice: toast,
   onWindowState: updateWindowState,
 });
@@ -65,6 +71,141 @@ const sourceExtensions = () =>
   });
 initializeIcons();
 setupWindowFrame(host);
+const renderTabs = createTabBar($('#document-tabs'), {
+  select: (id) => action('select-tab', { targetId: id }),
+  close: (id) => action('close-tab', { targetId: id }),
+  closeShortcut: () => shortcuts.getBindings()['close-tab'],
+});
+
+function updateTabs() {
+  renderTabs(
+    [...tabs].map(([id, tab]) => ({
+      id,
+      name: id === activeTabId ? metadata.name : tab.metadata.name,
+      path: id === activeTabId ? metadata.path : tab.metadata.path,
+      dirty: id === activeTabId ? mdText !== diskText : tab.mdText !== tab.diskText,
+    })),
+    activeTabId,
+  );
+}
+
+function captureTab() {
+  if (!activeTabId) {
+    return;
+  }
+  flush();
+  tabs.set(activeTabId, {
+    metadata,
+    mdText,
+    diskText,
+    mode,
+    richReference,
+    richSnapshot,
+    sourceState: source.state,
+    richState: rich.editor.action((ctx) => ctx.get(editorViewCtx).state),
+    writeScroll: $('#write-pane').scrollTop,
+    previewScroll: $('#preview-pane').scrollTop,
+    sourceScroll: source.scrollSnapshot(),
+  });
+}
+
+function revealTab() {
+  document.body.dataset.mode = mode;
+  $$('.view-switch button').forEach((b) => b.classList.toggle('selected', b.dataset.mode === mode));
+  paint();
+  source.requestMeasure();
+  $('#tab-' + activeTabId)?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+}
+
+function activateTab(id) {
+  if (id === activeTabId) {
+    return;
+  }
+  const tab = tabs.get(id);
+  if (!tab) {
+    throw Error('标签页已关闭。');
+  }
+  captureTab();
+  clearTimeout(paintTimer);
+  syncing = true;
+  try {
+    activeTabId = id;
+    ({ metadata, mdText, diskText, mode, richReference, richSnapshot } = tab);
+    document.body.dataset.mode = mode;
+    source.setState(tab.sourceState);
+    if (mode === 'source' || mode === 'split') {
+      source.dispatch({ effects: tab.sourceScroll });
+    }
+    rich.editor.action((ctx) => ctx.get(editorViewCtx).updateState(tab.richState));
+  } finally {
+    syncing = false;
+  }
+  revealTab();
+  $('#write-pane').scrollTop = tab.writeScroll;
+  $('#preview-pane').scrollTop = tab.previewScroll;
+}
+
+async function openTab(data) {
+  const id = data.id || crypto.randomUUID();
+  if (tabs.has(id)) {
+    activateTab(id);
+    return;
+  }
+  captureTab();
+  activeTabId = id;
+  mode = 'write';
+  await loadDocument({ ...data, id, assetBase: data.assetBase || '' });
+  captureTab();
+  revealTab();
+}
+
+async function selectTab(id) {
+  if (id === activeTabId) {
+    return true;
+  }
+  if (host.available) {
+    const result = await host.request('select-tab', { targetId: id });
+    if (!result) {
+      return false;
+    }
+  }
+  activateTab(id);
+  return true;
+}
+
+function markSaved(data) {
+  const id = data.id || activeTabId;
+  if (id === activeTabId) {
+    metadata = { ...metadata, ...data };
+    diskText = data.cleanText;
+    renderRecent(data.recent || []);
+    updateStatus();
+  } else if (tabs.has(id)) {
+    const tab = tabs.get(id);
+    tab.metadata = { ...tab.metadata, ...data };
+    tab.diskText = data.cleanText;
+    updateTabs();
+  }
+}
+
+function persistBrowserDrafts() {
+  if (host.available) {
+    return;
+  }
+  try {
+    const documents = [
+      ...[...tabs]
+        .filter(([id, tab]) => id !== activeTabId && tab.mdText !== tab.diskText)
+        .map(([, tab]) => ({ text: tab.mdText, name: tab.metadata.name })),
+      ...(mdText !== diskText ? [{ text: mdText, name: metadata.name }] : []),
+    ];
+    if (documents.length) {
+      localStorage.setItem('field-notes-draft', JSON.stringify({ documents }));
+    } else {
+      localStorage.removeItem('field-notes-draft');
+    }
+  } catch {}
+}
 
 function toast(message) {
   $('#toast').textContent = message;
@@ -86,13 +227,8 @@ function updateText(text) {
   paintTimer = setTimeout(paint, 130);
   if (host.isNative) {
     host.notifyChange(mdText);
-  } else if (!window.fieldHost) {
-    try {
-      localStorage.setItem(
-        'field-notes-draft',
-        JSON.stringify({ text: mdText, name: metadata.name }),
-      );
-    } catch {}
+  } else {
+    persistBrowserDrafts();
   }
   for (const fn of subscribers) {
     fn(mdText);
@@ -115,6 +251,7 @@ function flush() {
   return mdText;
 }
 function updateStatus() {
+  updateTabs();
   const dirty = mdText !== diskText;
   document.body.classList.toggle('dirty', dirty);
   $('#document-name').textContent = metadata.name;
@@ -225,7 +362,7 @@ async function setMode(next) {
 async function loadDocument(data) {
   syncing = true;
   try {
-    metadata = { ...metadata, ...data };
+    metadata = { encoding: 'UTF-8', eol: 'LF', path: null, assetBase: '', ...data };
     mdText = (data.text || '').replace(/\r\n?/g, '\n');
     diskText = (data.cleanText ?? mdText).replace(/\r\n?/g, '\n');
     setSource(mdText, true);
@@ -248,6 +385,9 @@ async function loadDocument(data) {
     $('#preview-pane').scrollTop = 0;
   } finally {
     syncing = false;
+    if (activeTabId) {
+      captureTab();
+    }
     paint();
   }
 }
@@ -363,9 +503,6 @@ function download(name, text, type) {
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
-function fallbackConfirm() {
-  return mdText === diskText || confirm('当前文档有未保存的更改，是否放弃更改并继续？');
-}
 async function action(name, extra = {}) {
   if (!ready) {
     return;
@@ -401,6 +538,46 @@ async function action(name, extra = {}) {
   flush();
   busy = true;
   try {
+    if (name === 'select-tab' || name === 'next-tab' || name === 'previous-tab') {
+      const ids = [...tabs.keys()];
+      const offset = name === 'previous-tab' ? -1 : 1;
+      const id =
+        extra.targetId || ids[(ids.indexOf(activeTabId) + offset + ids.length) % ids.length];
+      await selectTab(id);
+      return;
+    }
+    if (name === 'close-tab') {
+      if (!(await selectTab(extra.targetId || activeTabId))) {
+        return;
+      }
+      const closingId = activeTabId;
+      let result;
+      if (host.available) {
+        result = await host.request('close-tab');
+        if (!result) {
+          return;
+        }
+      } else if (
+        mdText !== diskText &&
+        !confirm('“' + metadata.name + '”有未保存的更改。关闭此标签页并放弃更改？')
+      ) {
+        return;
+      }
+      const ids = [...tabs.keys()];
+      const index = ids.indexOf(closingId);
+      tabs.delete(closingId);
+      activeTabId = null;
+      if (result) {
+        await openTab(result);
+      } else if (tabs.size) {
+        activateTab([...tabs.keys()][Math.min(index, tabs.size - 1)]);
+      } else {
+        await openTab({ name: `未命名 ${++untitledCount}.md`, text: '', path: null });
+      }
+      updateTabs();
+      window.FieldMarkdown.focus();
+      return;
+    }
     if (name === 'export-word') {
       if (!host.available) {
         toast('请在页核桌面版中导出 Word。');
@@ -477,32 +654,29 @@ async function action(name, extra = {}) {
       const result = await host.request(name, extra);
       if (result) {
         if (name === 'save' || name === 'save-as') {
-          metadata = { ...metadata, ...result };
-          diskText = result.cleanText;
-          renderRecent(result.recent || []);
-          updateStatus();
+          markSaved(result);
           toast('已保存 · ' + metadata.name);
         } else {
-          await loadDocument(result);
+          for (const document of result.documents || [result]) {
+            await openTab(document);
+          }
+          window.FieldMarkdown.focus();
           $('#recovery-banner').hidden = true;
         }
       }
     } else if (name === 'open') {
-      if (fallbackConfirm()) {
-        $('#open-input').click();
-      }
+      $('#open-input').click();
     } else if (name === 'new') {
-      if (fallbackConfirm()) {
-        await loadDocument({ name: '未命名.md', text: '', path: null });
-      }
+      await openTab({ name: `未命名 ${++untitledCount}.md`, text: '', path: null });
+      window.FieldMarkdown.focus();
     } else if (name === 'save' || name === 'save-as') {
       download(metadata.name, mdText, 'text/markdown');
       diskText = mdText;
       updateStatus();
       toast('已下载 Markdown 副本');
     } else if (name === 'restore' && recovery) {
-      if (fallbackConfirm()) {
-        await loadDocument({ ...recovery, path: null, cleanText: '' });
+      for (const draft of recovery.documents || [recovery]) {
+        await openTab({ ...draft, path: null, cleanText: '' });
       }
       $('#recovery-banner').hidden = true;
     } else if (name === 'dismiss-recovery') {
@@ -512,6 +686,7 @@ async function action(name, extra = {}) {
   } catch (e) {
     toast(e.message || String(e));
   } finally {
+    persistBrowserDrafts();
     busy = false;
   }
 }
@@ -598,7 +773,7 @@ $('#open-input').onchange = async (e) => {
     if (file.size > 10 * 1024 * 1024) {
       throw Error('文件超过 10 MB');
     }
-    await loadDocument({
+    await openTab({
       name: file.name,
       text: await file.text(),
       path: null,
@@ -622,7 +797,8 @@ $('#image-input').onchange = async (e) => {
   e.target.value = '';
 };
 window.addEventListener('beforeunload', (e) => {
-  if (!host.isNative && flush() !== diskText) {
+  captureTab();
+  if (!host.isNative && [...tabs.values()].some((tab) => tab.mdText !== tab.diskText)) {
     e.preventDefault();
     e.returnValue = '';
   }
@@ -670,17 +846,18 @@ async function initialize() {
   ready = true;
   if (host.available) {
     const data = await host.request('ready');
-    await loadDocument(data.document);
+    await openTab(data.document);
     recovery = data.recovery;
     $('#connection').textContent = '本地文件已连接';
   } else {
+    await openTab({ name: metadata.name, text: mdText });
     try {
       recovery = JSON.parse(localStorage.getItem('field-notes-draft') || 'null');
     } catch {}
     paint();
     $('#connection').textContent = '浏览器模式 · 保存副本';
   }
-  if (recovery && recovery.text !== mdText) {
+  if (recovery && (recovery.text || recovery.documents?.length || recovery.pending)) {
     $('#recovery-banner').hidden = false;
   }
   $('#loading').hidden = true;
@@ -688,6 +865,11 @@ async function initialize() {
 }
 window.FieldMarkdown = {
   flush,
+  flushAll: () => {
+    captureTab();
+    return [...tabs].map(([id, tab]) => ({ tabId: id, text: tab.mdText }));
+  },
+  markSaved,
   getMarkdown: () => flush(),
   setDocument: async (data) => {
     await window.FieldMarkdown.ready;
