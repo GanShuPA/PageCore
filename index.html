@@ -168,6 +168,16 @@
           <button data-action="export" class="text-tool" title="导出带排版的 HTML">
             导出 HTML
           </button>
+          <button data-action="export-pdf" class="text-tool" title="设置排版并导出 PDF 文件">
+            导出 PDF
+          </button>
+          <button
+            data-action="export-word"
+            class="text-tool"
+            title="导出可编辑的 Word 文档 (.docx)"
+          >
+            导出 Word
+          </button>
         </div>
         <div id="recovery-banner" hidden>
           <span>发现上次未保存的草稿。</span>
@@ -289,6 +299,117 @@
         <div class="shortcut-reset-row"><button id="reset-shortcuts">恢复默认快捷键</button></div>
       </section>
       <button class="primary settings-done" id="done-settings">完成</button>
+    </dialog>
+    <dialog id="pdf-dialog" aria-labelledby="pdf-title">
+      <form id="pdf-form">
+        <div class="dialog-heading">
+          <span class="tiny-label">PAGECORE / PDF EXPORT</span>
+          <button type="button" id="pdf-close" aria-label="关闭 PDF 设置">×</button>
+        </div>
+        <h2 id="pdf-title">PDF 导出设置</h2>
+        <p class="settings-intro">调整文档排版。成功导出后记住本次设置。</p>
+        <div class="pdf-grid">
+          <label>
+            纸张
+            <select name="paper" autofocus>
+              <option>A4</option>
+              <option>A5</option>
+              <option>Letter</option>
+            </select>
+          </label>
+          <label>
+            方向
+            <select name="orientation">
+              <option value="portrait">纵向</option>
+              <option value="landscape">横向</option>
+            </select>
+          </label>
+        </div>
+        <fieldset>
+          <legend>页边距 · mm</legend>
+          <div class="pdf-margins">
+            <label>
+              上
+              <input name="marginTop" type="number" min="5" max="40" step="1" required />
+            </label>
+            <label>
+              下
+              <input name="marginBottom" type="number" min="5" max="40" step="1" required />
+            </label>
+            <label>
+              左
+              <input name="marginLeft" type="number" min="5" max="40" step="1" required />
+            </label>
+            <label>
+              右
+              <input name="marginRight" type="number" min="5" max="40" step="1" required />
+            </label>
+          </div>
+        </fieldset>
+        <div class="pdf-typography">
+          <label>
+            正文字体
+            <select name="font">
+              <option value="sans">微软雅黑 · 无衬线</option>
+              <option value="serif">宋体 · 衬线</option>
+              <option value="mono">Consolas · 等宽</option>
+            </select>
+          </label>
+          <label>
+            字号 · pt
+            <input name="fontSize" type="number" min="8" max="24" step="1" required />
+          </label>
+          <label>
+            行距
+            <select name="lineHeight">
+              <option value="1.4">紧凑 · 1.4</option>
+              <option value="1.7">标准 · 1.7</option>
+              <option value="2">宽松 · 2.0</option>
+            </select>
+          </label>
+        </div>
+        <div class="pdf-grid pdf-running-text">
+          <label>
+            页眉
+            <input
+              name="header"
+              type="text"
+              maxlength="60"
+              placeholder="例如：文档名称（可留空）"
+            />
+          </label>
+          <label>
+            页脚
+            <input
+              name="footer"
+              type="text"
+              maxlength="60"
+              placeholder="例如：作者或项目（可留空）"
+            />
+          </label>
+        </div>
+        <label class="pdf-checkbox">
+          <input name="pageNumbers" type="checkbox" />
+          显示页码（第 1 / N 页）
+        </label>
+        <p class="pdf-hint">
+          页眉在左上，页脚在左下，页码在右下。启用时对应上下边距至少 12
+          mm；过长文字会截断。字体缺失时使用系统替代字体。
+        </p>
+        <p id="pdf-summary" role="status"></p>
+        <p id="pdf-error" role="alert"></p>
+        <div class="pdf-actions">
+          <button type="button" id="pdf-reset">恢复默认</button>
+          <span></span>
+          <button type="button" id="pdf-cancel">取消</button>
+          <button type="submit" id="pdf-submit" class="primary">选择位置并导出</button>
+        </div>
+      </form>
+    </dialog>
+    <dialog id="word-export-warning" aria-labelledby="word-export-warning-title">
+      <h2 id="word-export-warning-title">Word 已导出，请检查公式</h2>
+      <p id="word-export-warning-text"></p>
+      <form method="dialog"><button class="primary">知道了</button></form>
     </dialog>
     <dialog id="help-dialog">
       <div class="dialog-heading">

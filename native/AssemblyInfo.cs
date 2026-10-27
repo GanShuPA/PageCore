@@ -1,5 +1,5 @@
 [assembly: System.Reflection.AssemblyTitle("页核 · PAGECORE")]
 [assembly: System.Reflection.AssemblyProduct("页核 · PAGECORE")]
 [assembly: System.Reflection.AssemblyDescription("页核 Markdown 编辑器")]
-[assembly: System.Reflection.AssemblyVersion("0.2.0.0")]
-[assembly: System.Reflection.AssemblyFileVersion("0.2.0.0")]
+[assembly: System.Reflection.AssemblyVersion("0.3.0.0")]
+[assembly: System.Reflection.AssemblyFileVersion("0.3.0.0")]

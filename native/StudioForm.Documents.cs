@@ -102,51 +102,7 @@ namespace FieldNotes
                     )
                 )
                     throw new IOException("导出文件扩展名必须为 .html。");
-                // Embed local raster images so exported documents remain portable.
-                if (assetFolder != null)
-                    html = System.Text.RegularExpressions.Regex.Replace(
-                        html,
-                        "https://media\\.field\\.local/[^\\\"<> ]+",
-                        match =>
-                        {
-                            try
-                            {
-                                var u = new Uri(match.Value);
-                                var path = Path.GetFullPath(
-                                    Path.Combine(
-                                        assetFolder,
-                                        Uri.UnescapeDataString(u.AbsolutePath)
-                                            .TrimStart('/')
-                                            .Replace('/', Path.DirectorySeparatorChar)
-                                    )
-                                );
-                                if (
-                                    !path.StartsWith(
-                                        assetFolder.TrimEnd('\\') + "\\",
-                                        StringComparison.OrdinalIgnoreCase
-                                    )
-                                )
-                                    return "";
-                                var ext = Path.GetExtension(path).ToLowerInvariant();
-                                var mime =
-                                    ext == ".png" ? "image/png"
-                                    : ext == ".jpg" || ext == ".jpeg" ? "image/jpeg"
-                                    : ext == ".gif" ? "image/gif"
-                                    : ext == ".webp" ? "image/webp"
-                                    : null;
-                                if (mime == null || new FileInfo(path).Length > 20 * 1024 * 1024)
-                                    return "";
-                                return "data:"
-                                    + mime
-                                    + ";base64,"
-                                    + Convert.ToBase64String(File.ReadAllBytes(path));
-                            }
-                            catch
-                            {
-                                return "";
-                            }
-                        }
-                    );
+                html = EmbedLocalImages(html, false);
                 DocumentSession.AtomicWrite(
                     dialog.FileName,
                     new UTF8Encoding(false).GetBytes(html),
@@ -154,6 +110,58 @@ namespace FieldNotes
                 );
                 return new { path = dialog.FileName };
             }
+        }
+
+        string EmbedLocalImages(string html, bool strict)
+        {
+            // Embed local raster images so exported documents remain portable.
+            if (assetFolder != null)
+                html = System.Text.RegularExpressions.Regex.Replace(
+                    html,
+                    "https://media\\.field\\.local/[^\\\"<> ]+",
+                    match =>
+                    {
+                        try
+                        {
+                            var u = new Uri(match.Value);
+                            var path = Path.GetFullPath(
+                                Path.Combine(
+                                    assetFolder,
+                                    Uri.UnescapeDataString(u.AbsolutePath)
+                                        .TrimStart('/')
+                                        .Replace('/', Path.DirectorySeparatorChar)
+                                )
+                            );
+                            if (
+                                !path.StartsWith(
+                                    assetFolder.TrimEnd('\\') + "\\",
+                                    StringComparison.OrdinalIgnoreCase
+                                )
+                            )
+                                throw new IOException("图片位于文档目录之外。");
+                            var ext = Path.GetExtension(path).ToLowerInvariant();
+                            var mime =
+                                ext == ".png" ? "image/png"
+                                : ext == ".jpg" || ext == ".jpeg" ? "image/jpeg"
+                                : ext == ".gif" ? "image/gif"
+                                : ext == ".webp" ? "image/webp"
+                                : null;
+                            if (mime == null || new FileInfo(path).Length > 20 * 1024 * 1024)
+                                throw new IOException("图片格式不受支持或超过 20 MB。");
+                            return "data:"
+                                + mime
+                                + ";base64,"
+                                + Convert.ToBase64String(File.ReadAllBytes(path));
+                        }
+                        catch (Exception error)
+                        {
+                            if (strict)
+                                throw new IOException("本地图片无法导出：" + error.Message, error);
+                            return "";
+                        }
+                    }
+                );
+            return html;
         }
 
         void OpenExternal(string url)
@@ -170,6 +178,12 @@ namespace FieldNotes
 
         async void OnClosing(object sender, FormClosingEventArgs e)
         {
+            if (exportingPdf)
+            {
+                e.Cancel = true;
+                Send(new { type = "notice", message = "PDF 正在导出，请稍候再关闭。" });
+                return;
+            }
             if (allowClose || !ready)
                 return;
             e.Cancel = true;

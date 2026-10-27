@@ -25,6 +25,9 @@ namespace FieldNotes
         static extern bool ReleaseCapture();
 
         [DllImport("user32.dll")]
+        static extern bool IsZoomed(IntPtr hwnd);
+
+        [DllImport("user32.dll")]
         static extern IntPtr SendMessage(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam);
 
         [DllImport("dwmapi.dll")]
@@ -82,7 +85,10 @@ namespace FieldNotes
         {
             if (m.Msg == WmNcCalcSize)
             {
-                if (m.WParam != IntPtr.Zero && WindowState == FormWindowState.Maximized)
+                // WinForms updates WindowState after WM_NCCALCSIZE during a restore.
+                // Use the native state to avoid replacing the restored client rectangle
+                // with the full monitor work area, which offsets and clips WebView2.
+                if (m.WParam != IntPtr.Zero && IsZoomed(m.HWnd))
                 {
                     var work = Screen.FromHandle(Handle).WorkingArea;
                     Marshal.StructureToPtr(

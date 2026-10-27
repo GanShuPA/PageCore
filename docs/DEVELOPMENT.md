@@ -20,6 +20,8 @@
 
 前端不直接访问磁盘；宿主决定文件对话框、确认及保存结果。渲染模块不得执行文档中的脚本。保存成功后才能更新 cleanText。保留 `FieldMarkdown` 嵌入 API、旧存储键及虚拟域名，避免破坏已有设置和宿主集成。
 
+导出模块：`src/pdf-options.js` 验证 PDF 设置，`src/pdf-settings.js` 管理导出面板，`src/pdf-export.js` 生成打印排版，原生 `PdfOptions.cs` 与 `PdfExporter.cs` 同步打印参数并生成 PDF。`src/word-export.js` 将净化后的正文转换为可编辑 OOXML，通过 docx/math 生成原生公式；`StudioForm.Word.cs` 内嵌本地图片并原子保存 DOCX。PDF 偏好单独存于 `pagecore-pdf-options-v1`，不影响编辑器外观。新增依赖须同步锁文件，并通过构建生成第三方许可清单。
+
 ## 格式与命名
 
 - `.editorconfig` 定义编码、缩进、换行。前端使用两空格，C# / PowerShell 使用四空格。

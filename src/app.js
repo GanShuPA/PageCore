@@ -21,6 +21,8 @@ import { EditorState } from '@codemirror/state';
 import { openSearchPanel } from '@codemirror/search';
 import { createRenderer, headings, countWords, exportDocument, assetURL } from './render.js';
 import { setupShortcuts } from './shortcuts.js';
+import { createPdfDocument } from './pdf-export.js';
+import { setupPdfSettings } from './pdf-settings.js';
 import welcome from './welcome.md';
 import '@milkdown/crepe/theme/common/style.css';
 import '@milkdown/crepe/theme/frame.css';
@@ -28,6 +30,7 @@ import 'katex/dist/katex.min.css';
 import './style.css';
 import './window-frame.css';
 import './settings.css';
+import './pdf-settings.css';
 
 let mdText = welcome;
 let diskText = welcome;
@@ -52,6 +55,7 @@ const host = createHostBridge({
   onWindowState: updateWindowState,
 });
 const appearance = setupAppearance(() => source?.requestMeasure());
+const pdfSettings = setupPdfSettings();
 const sourceExtensions = () =>
   createSourceExtensions({
     isSyncing: () => syncing,
@@ -397,6 +401,65 @@ async function action(name, extra = {}) {
   flush();
   busy = true;
   try {
+    if (name === 'export-word') {
+      if (!host.available) {
+        toast('请在页核桌面版中导出 Word。');
+        return;
+      }
+      const button = $('[data-action="export-word"]');
+      button.disabled = true;
+      button.textContent = '导出中…';
+      try {
+        const title = metadata.name;
+        const html = render(mdText, metadata.assetBase, true);
+        const prepared = await host.request('prepare-word', { html });
+        const { createWordDocument } = await import('./word-export.js');
+        const { base64, warnings } = await createWordDocument(title, prepared.html);
+        const result = await host.request('export-word', { base64 });
+        if (result) {
+          toast('Word 已导出 · ' + result.path);
+          if (warnings.length) {
+            $('#word-export-warning-text').textContent =
+              warnings.join('；') + '。请在 Word 中检查相应公式。';
+            $('#word-export-warning').showModal();
+          }
+        }
+      } finally {
+        button.disabled = false;
+        button.textContent = '导出 Word';
+      }
+      return;
+    }
+    if (name === 'export-pdf') {
+      if (!host.available) {
+        toast('请在页核桌面版中导出 PDF。');
+        return;
+      }
+      const options = await pdfSettings.open();
+      if (!options) {
+        return;
+      }
+      flush();
+      const button = $('[data-action="export-pdf"]');
+      button.disabled = true;
+      button.textContent = '导出中…';
+      try {
+        const html = createPdfDocument(
+          metadata.name,
+          render(mdText, metadata.assetBase, true),
+          options,
+        );
+        const result = await host.request('export-pdf', { html, options });
+        if (result) {
+          const remembered = pdfSettings.remember(options);
+          toast('PDF 已导出 · ' + result.path + (remembered ? '' : '（设置未能保存到本机）'));
+        }
+      } finally {
+        button.disabled = false;
+        button.textContent = '导出 PDF';
+      }
+      return;
+    }
     if (name === 'export') {
       const html = exportDocument(metadata.name, render(mdText, metadata.assetBase, true));
       if (host.available) {

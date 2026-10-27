@@ -1,0 +1,109 @@
+#pdf-dialog {
+  width: 620px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  padding: 24px 28px;
+}
+#pdf-dialog h2 {
+  margin: 16px 0 6px;
+}
+#pdf-dialog .settings-intro {
+  margin-bottom: 20px;
+}
+.pdf-grid,
+.pdf-margins,
+.pdf-typography {
+  display: grid;
+  gap: 14px;
+}
+.pdf-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.pdf-margins {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.pdf-typography {
+  grid-template-columns: 1.5fr 0.7fr 1fr;
+}
+#pdf-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  font-size: 12px;
+}
+#pdf-form input,
+#pdf-form select {
+  width: 100%;
+  min-width: 0;
+  padding: 9px 10px;
+  font: inherit;
+  color: var(--ink);
+  background: var(--bg);
+  border: 1px solid var(--line);
+}
+#pdf-form :is(input, select):focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+#pdf-form fieldset {
+  border: 0;
+  border-top: 1px solid var(--line);
+  padding: 16px 0 20px;
+  margin: 20px 0 0;
+}
+#pdf-form legend {
+  padding: 0 10px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.pdf-running-text {
+  margin: 20px 0 16px;
+}
+#pdf-form .pdf-checkbox {
+  flex-direction: row;
+  align-items: center;
+}
+#pdf-form input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  accent-color: #899b45;
+}
+#pdf-dialog .pdf-hint {
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+#pdf-summary {
+  padding: 10px 12px;
+  background: var(--soft);
+  font-size: 12px;
+}
+#pdf-error {
+  color: #b74735;
+  margin: 8px 0;
+}
+#pdf-error:empty {
+  display: none;
+}
+.pdf-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-top: 12px;
+}
+.pdf-actions span {
+  flex: 1;
+}
+@media (max-width: 520px) {
+  .pdf-typography {
+    grid-template-columns: 1fr 1fr;
+  }
+  .pdf-typography > label:first-child {
+    grid-column: 1 / -1;
+  }
+  .pdf-grid {
+    grid-template-columns: 1fr;
+  }
+}

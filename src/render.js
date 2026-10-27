@@ -37,7 +37,7 @@ export function createRenderer(win) {
     });
     box.querySelectorAll('img').forEach((img) => {
       img.src = assetURL(img.getAttribute('src') || '', base);
-      img.loading = 'lazy';
+      img.setAttribute('loading', 'lazy');
     });
     box.querySelectorAll('a').forEach((a) => {
       a.rel = 'noreferrer noopener';

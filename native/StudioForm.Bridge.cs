@@ -8,7 +8,7 @@ namespace FieldNotes
 {
     sealed partial class StudioForm
     {
-        void OnWebMessageReceived(object sender, CoreWebView2WebMessageReceivedEventArgs e)
+        async void OnWebMessageReceived(object sender, CoreWebView2WebMessageReceivedEventArgs e)
         {
             if (!OwnDocument(e.Source))
                 return;
@@ -173,6 +173,20 @@ namespace FieldNotes
                         break;
                     case "export":
                         result = Export(Get(m, "html"));
+                        break;
+                    case "export-pdf":
+                        object pdfOptions;
+                        m.TryGetValue("options", out pdfOptions);
+                        result = await ExportPdfAsync(
+                            Get(m, "html"),
+                            PdfOptions.Parse(pdfOptions as Dictionary<string, object>)
+                        );
+                        break;
+                    case "prepare-word":
+                        result = PrepareWord(Get(m, "html"));
+                        break;
+                    case "export-word":
+                        result = ExportWord(Get(m, "base64"));
                         break;
                     case "external":
                         OpenExternal(Get(m, "url"));

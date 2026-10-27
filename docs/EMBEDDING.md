@@ -37,18 +37,25 @@ window.FieldMarkdown.focus();
 即时变更：`{ command: 'changed', text }`，无回复。
 通知：`{ type: 'notice', message }`。
 
-| command          | 附加字段                       | 返回 data                     |
-| ---------------- | ------------------------------ | ----------------------------- |
-| ready            | 无                             | `{document, recovery}`        |
-| new / open       | 无                             | 文档对象；取消返回 null       |
-| recent           | path（仅可选最近列表内的记录） | 文档对象或 null               |
-| save / save-as   | 无                             | 文档对象或 null               |
-| restore          | 无                             | 恢复为副本后的文档对象或 null |
-| dismiss-recovery | 无                             | null                          |
-| export           | html                           | `{path}` 或 null              |
-| external         | url（http/https）              | null                          |
+| command          | 附加字段                              | 返回 data                     |
+| ---------------- | ------------------------------------- | ----------------------------- |
+| ready            | 无                                    | `{document, recovery}`        |
+| new / open       | 无                                    | 文档对象；取消返回 null       |
+| recent           | path（仅可选最近列表内的记录）        | 文档对象或 null               |
+| save / save-as   | 无                                    | 文档对象或 null               |
+| restore          | 无                                    | 恢复为副本后的文档对象或 null |
+| dismiss-recovery | 无                                    | null                          |
+| export           | html                                  | `{path}` 或 null              |
+| export-pdf       | html（已净化的打印排版页面）、options | `{path}` 或 null              |
+| prepare-word     | html（已净化的正文）                  | `{html}`（本地图片已内嵌）    |
+| export-word      | base64（DOCX 文件）                   | `{path}` 或 null              |
+| external         | url（http/https）                     | null                          |
 
 文档对象包含 `name, path, text, cleanText, encoding, eol, dirty, assetBase, recent`。保存后更新 cleanText，取消或失败时不得将文档标为已保存。
+
+`export-pdf` 由桌面宿主选择保存位置，等待图片和字体加载后生成 PDF；取消返回 null，失败返回错误，成功也不改变 Markdown 的保存状态。`options` 包含 `paper`（A4/A5/Letter）、`orientation`（portrait/landscape）、`marginTop/Bottom/Left/Right`（mm）、`font`（sans/serif/mono）、`fontSize`（pt）、`lineHeight`、`header`、`footer` 和 `pageNumbers`。省略 options 兼容原 A4 默认值。前端使用相同选项生成打印 CSS，宿主校验尺寸并同步设置打印参数。参考 `PdfOptions.cs`、`StudioForm.Pdf.cs` 和 `PdfExporter.cs`。
+
+Word 导出先调用 `prepare-word` 在既有图片目录边界内内嵌本地图片，然后前端生成 DOCX，再通过 `export-word` 选择位置并原子保存。取消和失败不改变 Markdown 保存状态。其他嵌入宿主需实现以上命令。
 
 其他容器可在 app.js 执行前注入 `window.fieldHost = { request(command, payload): Promise<data> }`。该适配器优先于 WebView2 桥接；用 `FieldMarkdown.onChange` 订阅变更。尚未提供跨源 iframe postMessage 协议。
 

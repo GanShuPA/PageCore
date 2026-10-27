@@ -71,9 +71,10 @@ namespace FieldNotes
                 fresh.Save(Path.Combine(folder, "new.md"), backup);
                 Assert(File.Exists(fresh.PathName), "save new");
                 Assert(!DocumentSession.Allowed("bad.exe"), "extension guard");
+                PdfOptionsTests.Run();
                 File.WriteAllText(
                     Path.Combine(Program.Data, "self-test.json"),
-                    "{\"passed\":true,\"checks\":[\"five encodings\",\"exact no-edit roundtrip\",\"CRLF preservation\",\"external conflict\",\"atomic save\",\"new document\",\"extension guard\"]}"
+                    "{\"passed\":true,\"checks\":[\"five encodings\",\"exact no-edit roundtrip\",\"CRLF preservation\",\"external conflict\",\"atomic save\",\"new document\",\"extension guard\",\"PDF options and validation\"]}"
                 );
                 return 0;
             }
