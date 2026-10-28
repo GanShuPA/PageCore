@@ -7,6 +7,7 @@ export const shortcutCommands = [
   ['next-tab', '下一个标签页', 'Ctrl+Tab'],
   ['previous-tab', '上一个标签页', 'Ctrl+Shift+Tab'],
   ['find', '查找与替换', 'Ctrl+F'],
+  ['workspace-search', '工作区全文搜索', 'Ctrl+Shift+F'],
   ['bold', '加粗', 'Ctrl+B'],
   ['italic', '斜体', 'Ctrl+I'],
   ['focus', '专注模式', 'F8'],

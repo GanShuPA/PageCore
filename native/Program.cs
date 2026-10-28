@@ -34,9 +34,13 @@ namespace FieldNotes
             {
                 if (!isNew)
                 {
-                    MessageBox.Show(
-                        "页核 · PAGECORE 已经在运行，请切换到已有窗口。",
-                        "页核 · PAGECORE"
+                    PagePrompt.Ask(
+                        null,
+                        "页核已经运行",
+                        "请切换到已有的页核窗口继续使用。",
+                        "知道了",
+                        null,
+                        false
                     );
                     return;
                 }

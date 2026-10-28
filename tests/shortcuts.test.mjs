@@ -8,7 +8,7 @@ import {
   defaultShortcuts,
   eventShortcut,
 } from '../src/shortcuts.js';
-const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+const html = readFileSync(new URL('../src/index.html', import.meta.url), 'utf8');
 function fixture(storage) {
   const dom = new JSDOM(html, { url: 'https://notes.field.local' });
   const document = dom.window.document;

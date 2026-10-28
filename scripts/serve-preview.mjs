@@ -1,8 +1,13 @@
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const root = path.resolve('dist');
+const root = path.resolve(fileURLToPath(new URL('../dist/', import.meta.url)));
+const port = Number(process.env.PAGECORE_TEST_PORT || 4173);
+if (!Number.isInteger(port) || port < 1024 || port > 65535) {
+  throw new Error('PAGECORE_TEST_PORT must be an integer between 1024 and 65535');
+}
 const mimeTypes = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
@@ -31,4 +36,4 @@ createServer(async (request, response) => {
   } catch {
     response.writeHead(404).end();
   }
-}).listen(4173, '127.0.0.1');
+}).listen(port, '127.0.0.1');

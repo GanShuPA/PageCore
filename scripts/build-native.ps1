@@ -1,7 +1,8 @@
 ﻿$ErrorActionPreference = 'Stop'
-$nativeOutput = Join-Path $PSScriptRoot 'bin'
-$nativeVendor = Join-Path $PSScriptRoot 'vendor/webview2'
-$nativeRoot = Join-Path $PSScriptRoot 'native'
+$projectRoot = Split-Path -Parent $PSScriptRoot
+$nativeOutput = Join-Path $projectRoot 'bin'
+$nativeVendor = Join-Path $projectRoot 'vendor/webview2'
+$nativeRoot = Join-Path $projectRoot 'native'
 New-Item -ItemType Directory -Force -Path $nativeOutput | Out-Null
 $compiler = Join-Path $env:WINDIR 'Microsoft.NET/Framework64/v4.0.30319/csc.exe'
 $compilerArguments = @(
@@ -10,7 +11,7 @@ $compilerArguments = @(
     '/platform:x64'
     '/optimize+'
     '/warnaserror+'
-    "/win32icon:$PSScriptRoot/assets/field-notes.ico"
+    "/win32icon:$projectRoot/assets/field-notes.ico"
     "/win32manifest:$nativeRoot/app.manifest"
     "/out:$nativeOutput/PageCore.exe"
     '/reference:System.dll'

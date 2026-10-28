@@ -791,24 +791,81 @@ body[data-mode='read'] .prose {
   font-size: 14px;
   z-index: 100;
 }
+#image-progress {
+  position: fixed;
+  z-index: 300;
+  top: 74px;
+  right: 20px;
+  padding: 10px 16px;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 12px;
+  box-shadow: 0 5px 22px #0002;
+}
+.image-drop-target {
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
 dialog {
   border: 1px solid var(--line);
   background: var(--paper);
   color: var(--ink);
-  max-width: 560px;
-  padding: 30px 35px;
+  max-width: min(560px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  padding: 24px 28px;
   box-shadow: 0 20px 80px #0003;
 }
 dialog::backdrop {
   background: #1b251d66;
+}
+#confirm-dialog {
+  width: min(520px, calc(100vw - 32px));
+  padding: 24px 28px;
+}
+#confirm-dialog h2 {
+  margin: 20px 0 12px;
+  font-size: 22px;
+}
+#confirm-message {
+  min-height: 52px;
+  overflow-wrap: anywhere;
+  color: var(--muted);
+}
+.confirm-kicker {
+  color: var(--muted);
+  font: 10px var(--mono);
+  letter-spacing: 1px;
+}
+.confirm-kicker span {
+  display: inline-block;
+  width: 28px;
+  height: 3px;
+  margin: 0 10px 3px 0;
+  background: var(--accent);
+}
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  border-top: 1px solid var(--line);
+  padding-top: 18px;
+}
+.confirm-actions button {
+  padding: 10px 20px;
+  border: 1px solid var(--line);
+}
+.confirm-actions .primary {
+  border-color: var(--ink);
 }
 dialog p {
   line-height: 1.9;
   font-size: 13px;
 }
 dialog h2 {
-  font-size: 26px;
-  margin: 24px 0;
+  font-size: 22px;
+  line-height: 1.4;
+  margin: 16px 0 12px;
+  overflow-wrap: anywhere;
 }
 .dialog-heading {
   display: flex;
@@ -817,6 +874,29 @@ dialog h2 {
 }
 .dialog-heading button {
   font-size: 24px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  flex: none;
+}
+.dialog-heading .tiny-label::before {
+  content: '';
+  display: inline-block;
+  width: 28px;
+  height: 3px;
+  margin: 0 10px 3px 0;
+  background: var(--accent);
+}
+dialog
+  :is(.primary, .confirm-actions button, .workspace-dialog-actions button, .pdf-actions button) {
+  min-height: 36px;
+  padding: 8px 18px;
+  font-size: 13px;
+}
+.confirm-actions,
+.workspace-dialog-actions,
+.pdf-actions {
+  flex-wrap: wrap;
 }
 .shortcut-grid {
   display: grid;

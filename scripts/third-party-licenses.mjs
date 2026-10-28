@@ -1,4 +1,4 @@
-import { readFile, readdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 async function packageDirectories(base) {
@@ -16,7 +16,10 @@ async function packageDirectories(base) {
 }
 
 /** Collect installed package notices in deterministic order, including build dependencies. */
-export async function writeThirdPartyNotices(store = 'node_modules/.pnpm', output = '.') {
+export async function writeThirdPartyNotices(
+  store = 'node_modules/.pnpm',
+  output = 'dist/licenses',
+) {
   const packages = new Map();
   for (const item of (await readdir(store, { withFileTypes: true })).sort((a, b) =>
     a.name.localeCompare(b.name, 'en'),
@@ -63,6 +66,7 @@ export async function writeThirdPartyNotices(store = 'node_modules/.pnpm', outpu
     }
   }
   const sorted = [...packages.entries()].sort(([a], [b]) => a.localeCompare(b, 'en'));
+  await mkdir(output, { recursive: true });
   await writeFile(
     path.join(output, 'THIRD-PARTY.json'),
     JSON.stringify(

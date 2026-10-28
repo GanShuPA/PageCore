@@ -11,6 +11,7 @@ export default [
       'release/**',
       'vendor/**',
       '*_assets/**',
+      'docs/local/**',
     ],
   },
   js.configs.recommended,
@@ -19,7 +20,7 @@ export default [
     languageOptions: { globals: globals.browser },
   },
   {
-    files: ['*.{js,mjs,cjs}', 'scripts/**/*.mjs', 'tests/**/*.mjs'],
+    files: ['.config/**/*.{js,mjs,cjs}', 'scripts/**/*.{js,mjs,cjs}', 'tests/**/*.mjs'],
     languageOptions: { globals: globals.node },
   },
   {

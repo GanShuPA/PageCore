@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
@@ -28,7 +28,8 @@ namespace FieldNotes
         string assetFolder;
         bool ready,
             closing,
-            allowClose;
+            allowClose,
+            darkTheme;
         Dictionary<string, object> pendingRecovery;
         string DraftPath
         {
@@ -78,6 +79,7 @@ namespace FieldNotes
             {
                 draftTimer.Stop();
                 PersistDraft();
+                PersistSession();
             };
             Load += async (s, e) => await InitializeWebViewAsync();
             FormClosing += OnClosing;
@@ -88,6 +90,7 @@ namespace FieldNotes
             return new
             {
                 name = doc.Name,
+                view = workspace.Active.View,
                 id = workspace.Active.Id,
                 path = doc.PathName,
                 text = doc.Text,
@@ -123,6 +126,7 @@ namespace FieldNotes
 
         void Sync(Dictionary<string, object> message)
         {
+            SyncView(message);
             string text = Get(message, "text");
             if (text != null)
             {

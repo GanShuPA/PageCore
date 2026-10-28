@@ -73,6 +73,11 @@ namespace FieldNotes
                 Assert(!DocumentSession.Allowed("bad.exe"), "extension guard");
                 PdfOptionsTests.Run();
                 WorkspaceTests.Run(folder);
+                FolderWorkspaceTests.Run(folder);
+                ImageStoreTests.Run(folder);
+                PageFileDialog.SelfTest(folder);
+                PagePrompt.SelfTest();
+                SearchSessionTests.Run(folder);
                 File.WriteAllText(
                     Path.Combine(Program.Data, "self-test.json"),
                     "{\"passed\":true,\"checks\":[\"five encodings\",\"exact no-edit roundtrip\",\"CRLF preservation\",\"external conflict\",\"atomic save\",\"new document\",\"extension guard\",\"PDF options and validation\"]}"

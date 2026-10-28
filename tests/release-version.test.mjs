@@ -11,5 +11,5 @@ test('package, Windows executable, manifest and release documentation use the sa
   assert.ok(assembly.includes(`AssemblyFileVersion("${version}.0")`));
   assert.ok(read('native/app.manifest').includes(`version="${version}.0"`));
   assert.ok(read('README.md').includes(`PageCore-v${version}-windows-x64.zip`));
-  assert.ok(read(`docs/RELEASE-v${version}.md`).includes(`v${version}`));
+  assert.ok(read(`docs/releases/v${version}.md`).includes(`v${version}`));
 });

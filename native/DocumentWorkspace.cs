@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -9,6 +9,7 @@ namespace FieldNotes
     {
         public readonly string Id = Guid.NewGuid().ToString("N");
         public readonly DocumentSession Document = new DocumentSession();
+        public TabView View;
     }
 
     // Owns file identity and document lifetime; editor histories live in the web UI.

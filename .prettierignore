@@ -3,3 +3,4 @@ pnpm-lock.yaml
 src/welcome.md
 tests/交互验证.md
 assets/
+docs/local/

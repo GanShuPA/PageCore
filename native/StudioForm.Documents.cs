@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -41,6 +41,7 @@ namespace FieldNotes
             Remember();
             UpdateTitle();
             PersistDraft();
+            PersistSession();
             return Payload();
         }
 
@@ -48,12 +49,13 @@ namespace FieldNotes
         {
             if (!doc.Dirty)
                 return true;
-            var choice = MessageBox.Show(
+            var choice = PagePrompt.Ask(
                 this,
-                "“" + doc.Name + "”有未保存的更改。是否先保存？\n选择“否”将放弃这些更改。",
                 "保存更改",
-                MessageBoxButtons.YesNoCancel,
-                MessageBoxIcon.Question
+                "“" + doc.Name + "”有未保存的更改。关闭前保存这些内容吗？",
+                "保存",
+                "不保存",
+                darkTheme
             );
             if (choice == DialogResult.Cancel)
                 return false;
@@ -67,22 +69,14 @@ namespace FieldNotes
             string target = doc.PathName;
             if (saveAs || target == null)
             {
-                using (
-                    var dialog = new SaveFileDialog
-                    {
-                        Filter = "Markdown 文档|*.md|Markdown 文档|*.markdown|文本文件|*.txt",
-                        FileName = doc.Name,
-                        DefaultExt = "md",
-                        AddExtension = true,
-                        OverwritePrompt = true,
-                        Title = "保存 Markdown 文档",
-                    }
-                )
-                {
-                    if (dialog.ShowDialog(this) != DialogResult.OK)
-                        return false;
-                    target = dialog.FileName;
-                }
+                target = ChoosePath(
+                    "保存 Markdown 文档",
+                    FilePickerMode.Save,
+                    doc.Name,
+                    new[] { ".md", ".markdown", ".txt" }
+                );
+                if (target == null)
+                    return false;
             }
             bool conflict =
                 String.Equals(target, doc.PathName, StringComparison.OrdinalIgnoreCase)
@@ -94,12 +88,13 @@ namespace FieldNotes
                 );
             if (
                 conflict
-                && MessageBox.Show(
+                && PagePrompt.Ask(
                     this,
-                    "磁盘上的文件已被其他程序修改或删除。是否用当前编辑内容覆盖？\n选择“否”可以返回编辑器，再另存为新文件。",
                     "检测到外部修改",
-                    MessageBoxButtons.YesNo,
-                    MessageBoxIcon.Warning
+                    "磁盘上的文件已被其他程序修改或删除。继续将用当前内容覆盖；也可以取消后另存为新文件。",
+                    "覆盖",
+                    null,
+                    darkTheme
                 ) != DialogResult.Yes
             )
                 return false;
@@ -112,36 +107,25 @@ namespace FieldNotes
         {
             if (html == null || html.Length > DocumentSession.MaxBytes * 2)
                 throw new IOException("无法导出此文档。");
-            using (
-                var dialog = new SaveFileDialog
-                {
-                    Filter = "HTML 文档|*.html",
-                    FileName = Path.GetFileNameWithoutExtension(doc.Name) + ".html",
-                    DefaultExt = "html",
-                    AddExtension = true,
-                    OverwritePrompt = true,
-                    Title = "导出 HTML",
-                }
-            )
-            {
-                if (dialog.ShowDialog(this) != DialogResult.OK)
-                    return null;
-                if (
-                    !String.Equals(
-                        Path.GetExtension(dialog.FileName),
-                        ".html",
-                        StringComparison.OrdinalIgnoreCase
-                    )
+            string target = ChoosePath(
+                "导出 HTML",
+                FilePickerMode.Save,
+                Path.GetFileNameWithoutExtension(doc.Name) + ".html",
+                new[] { ".html" }
+            );
+            if (target == null)
+                return null;
+            if (
+                !String.Equals(
+                    Path.GetExtension(target),
+                    ".html",
+                    StringComparison.OrdinalIgnoreCase
                 )
-                    throw new IOException("导出文件扩展名必须为 .html。");
-                html = EmbedLocalImages(html, false);
-                DocumentSession.AtomicWrite(
-                    dialog.FileName,
-                    new UTF8Encoding(false).GetBytes(html),
-                    BackupPath
-                );
-                return new { path = dialog.FileName };
-            }
+            )
+                throw new IOException("导出文件扩展名必须为 .html。");
+            html = EmbedLocalImages(html, false);
+            DocumentSession.AtomicWrite(target, new UTF8Encoding(false).GetBytes(html), BackupPath);
+            return new { path = target };
         }
 
         string EmbedLocalImages(string html, bool strict)
@@ -221,7 +205,7 @@ namespace FieldNotes
             try
             {
                 string raw = await web.CoreWebView2.ExecuteScriptAsync(
-                    "window.FieldMarkdown.flushAll()"
+                    "window.FieldMarkdown.flushAll(true)"
                 );
                 var snapshots = new System.Web.Script.Serialization.JavaScriptSerializer
                 {
@@ -239,8 +223,15 @@ namespace FieldNotes
                         "window.FieldMarkdown.markSaved(" + json.Serialize(Payload()) + ")"
                     );
                 }
+                SessionStore.Save(SessionPath, workspace, previous);
                 draftTimer.Stop();
-                if (File.Exists(DraftPath))
+                if (pendingRecovery != null)
+                    DocumentSession.AtomicWrite(
+                        DraftPath,
+                        Encoding.UTF8.GetBytes(json.Serialize(new { pending = pendingRecovery })),
+                        null
+                    );
+                else if (File.Exists(DraftPath))
                     File.Delete(DraftPath);
                 allowClose = true;
                 BeginInvoke(new Action(Close));
@@ -248,10 +239,13 @@ namespace FieldNotes
             catch (Exception ex)
             {
                 PersistDraft();
-                MessageBox.Show(
+                PagePrompt.Ask(
                     this,
-                    "关闭前检查失败，已保留当前窗口：" + ex.Message,
-                    "页核 · PAGECORE"
+                    "关闭前检查失败",
+                    "已保留当前窗口：" + ex.Message,
+                    "知道了",
+                    null,
+                    darkTheme
                 );
             }
             finally

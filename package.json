@@ -1,6 +1,6 @@
 {
   "name": "pagecore",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "页核 PAGECORE — a local-first Markdown editor for Windows",
   "license": "MIT",
   "repository": "github:GanShuPA/PageCore-Markdown",
@@ -11,13 +11,13 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "node build.mjs",
+    "build": "node scripts/build.mjs",
     "test": "node --test tests/*.test.mjs",
-    "lint": "eslint src scripts tests *.js *.mjs *.cjs",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
+    "lint": "eslint --config .config/eslint.config.js src scripts tests .config/*.js",
+    "format": "prettier --config .config/prettier.json --write .",
+    "format:check": "prettier --config .config/prettier.json --check .",
     "check": "pnpm format:check && pnpm lint && pnpm test",
-    "test:browser": "playwright test"
+    "test:browser": "playwright test --config .config/playwright.config.js"
   },
   "dependencies": {
     "@codemirror/commands": "6.11.1",

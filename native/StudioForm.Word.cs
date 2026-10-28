@@ -37,31 +37,24 @@ namespace FieldNotes
                 || bytes[3] != 4
             )
                 throw new IOException("Word 文档生成失败。");
-            using (
-                var dialog = new SaveFileDialog
-                {
-                    Filter = "Word 文档|*.docx",
-                    FileName = Path.GetFileNameWithoutExtension(doc.Name) + ".docx",
-                    DefaultExt = "docx",
-                    AddExtension = true,
-                    OverwritePrompt = true,
-                    Title = "导出 Word",
-                }
-            )
-            {
-                if (dialog.ShowDialog(this) != DialogResult.OK)
-                    return null;
-                if (
-                    !String.Equals(
-                        Path.GetExtension(dialog.FileName),
-                        ".docx",
-                        StringComparison.OrdinalIgnoreCase
-                    )
+            string target = ChoosePath(
+                "导出 Word",
+                FilePickerMode.Save,
+                Path.GetFileNameWithoutExtension(doc.Name) + ".docx",
+                new[] { ".docx" }
+            );
+            if (target == null)
+                return null;
+            if (
+                !String.Equals(
+                    Path.GetExtension(target),
+                    ".docx",
+                    StringComparison.OrdinalIgnoreCase
                 )
-                    throw new IOException("导出文件扩展名必须为 .docx。");
-                DocumentSession.AtomicWrite(dialog.FileName, bytes, BackupPath);
-                return new { path = dialog.FileName };
-            }
+            )
+                throw new IOException("导出文件扩展名必须为 .docx。");
+            DocumentSession.AtomicWrite(target, bytes, BackupPath);
+            return new { path = target };
         }
     }
 }

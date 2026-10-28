@@ -17,6 +17,9 @@ export function initializeIcons() {
     link: 'm9 15 6-6M10 7l2-2a5 5 0 0 1 7 7l-2 2M14 17l-2 2a5 5 0 0 1-7-7l2-2',
     image: 'M3 3h18v18H3zM3 17l6-6 4 4 3-3 5 6M15 7h2v2h-2z',
     search: 'M15 15l6 6M17 10a7 7 0 1 1-14 0 7 7 0 1 1 14 0',
+    rename: 'M4 17v4h4L20 9l-4-4ZM14 7l4 4M4 4h6',
+    refresh: 'M20 8a8 8 0 1 0 0 8M20 3v6h-6',
+    close: 'm6 6 12 12M18 6 6 18',
   };
   icons.settings = 'M4 7h16M4 17h16M8 4v6M16 14v6';
   $$('[data-icon]').forEach(

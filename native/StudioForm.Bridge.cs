@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Windows.Forms;
@@ -17,8 +17,13 @@ namespace FieldNotes
             try
             {
                 m = json.Deserialize<Dictionary<string, object>>(e.WebMessageAsJson);
+                object darkValue;
+                if (m.TryGetValue("dark", out darkValue) && darkValue is bool)
+                    darkTheme = (bool)darkValue;
                 id = Get(m, "id");
                 var command = Get(m, "command");
+                if (command == "window:theme")
+                    return;
                 if (command == "window:drag")
                 {
                     StartWindowInteraction(null);
@@ -45,6 +50,20 @@ namespace FieldNotes
                     Close();
                     return;
                 }
+                if (command == "session-state")
+                {
+                    object entries;
+                    if (
+                        sessionReady
+                        && m.TryGetValue("views", out entries)
+                        && entries is System.Collections.IEnumerable
+                    )
+                        foreach (var entry in (System.Collections.IEnumerable)entries)
+                            if (entry is Dictionary<string, object>)
+                                SyncView((Dictionary<string, object>)entry);
+                    PersistSession();
+                    return;
+                }
                 if (command == "changed")
                 {
                     Sync(m);
@@ -55,11 +74,29 @@ namespace FieldNotes
                 if (command == "ready")
                 {
                     ready = true;
+                    RestoreFolder();
+                    try
+                    {
+                        var warnings = SessionStore.Restore(SessionPath, workspace);
+                        if (warnings.Length > 0)
+                            Send(
+                                new
+                                {
+                                    type = "notice",
+                                    message = "部分文档未能恢复：" + String.Join("；", warnings),
+                                }
+                            );
+                    }
+                    catch (Exception ex)
+                    {
+                        Send(new { type = "notice", message = "会话恢复失败：" + ex.Message });
+                    }
+                    sessionReady = true;
                     if (initialPath != null)
                     {
                         try
                         {
-                            doc.Open(initialPath);
+                            workspace.Open(initialPath);
                             Remember();
                         }
                         catch (Exception ex)
@@ -95,7 +132,15 @@ namespace FieldNotes
                         {
                             id = id,
                             ok = true,
-                            data = new { document = Payload(), recovery = pendingRecovery },
+                            data = new
+                            {
+                                document = Payload(),
+                                documents = SessionDocuments(),
+                                activeId = workspace.Active.Id,
+                                sessionSupported = true,
+                                recovery = pendingRecovery,
+                                folder = FolderPayload(),
+                            },
                         }
                     );
                     SendWindowState();
@@ -106,9 +151,73 @@ namespace FieldNotes
                     return;
                 }
                 Sync(m);
+                if (command == "workspace:search-cancel")
+                {
+                    if (searchCancellation != null)
+                        searchCancellation.Cancel();
+                    Send(
+                        new
+                        {
+                            id = id,
+                            ok = true,
+                            data = new { cancelled = true },
+                        }
+                    );
+                    return;
+                }
+                if (command == "workspace:search")
+                {
+                    var found = await SearchWorkspace(m);
+                    Send(
+                        new
+                        {
+                            id = id,
+                            ok = true,
+                            data = found,
+                        }
+                    );
+                    return;
+                }
+                if (command != null && command.StartsWith("workspace:", StringComparison.Ordinal))
+                {
+                    Send(
+                        new
+                        {
+                            id = id,
+                            ok = true,
+                            data = FolderCommand(command, m),
+                        }
+                    );
+                    return;
+                }
                 object result = null;
                 switch (command)
                 {
+                    case "choose-images":
+                        object multiple;
+                        result = ChooseImages(
+                            m.TryGetValue("multiple", out multiple)
+                                && multiple is bool
+                                && (bool)multiple
+                        );
+                        break;
+                    case "read-chosen-image":
+                        result = ReadChosenImage(Get(m, "token"));
+                        break;
+                    case "import-image":
+                        string ownerId = Get(m, "tabId");
+                        var owner = workspace.Find(ownerId);
+                        if (owner == null || owner != workspace.Active)
+                            throw new IOException("图片所属的标签页已切换或关闭，请重试。");
+                        result = new
+                        {
+                            path = ImageStore.Save(
+                                owner.Document,
+                                Get(m, "mime"),
+                                Get(m, "base64")
+                            ),
+                        };
+                        break;
                     case "save":
                         if (Save(false))
                             result = Payload();
@@ -123,19 +232,16 @@ namespace FieldNotes
                         break;
                     case "open":
                         {
-                            using (
-                                var dialog = new OpenFileDialog
-                                {
-                                    Filter = "Markdown 文件|*.md;*.markdown;*.txt|所有文件|*.*",
-                                    Title = "打开 Markdown 文档",
-                                }
-                            )
+                            string selected = ChoosePath(
+                                "打开 Markdown 文档",
+                                FilePickerMode.Open,
+                                null,
+                                new[] { ".md", ".markdown", ".txt" }
+                            );
+                            if (selected != null)
                             {
-                                if (dialog.ShowDialog(this) == DialogResult.OK)
-                                {
-                                    workspace.Open(dialog.FileName);
-                                    result = ChangedDocument();
-                                }
+                                workspace.Open(selected);
+                                result = ChangedDocument();
                             }
                         }
                         break;

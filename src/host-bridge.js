@@ -3,6 +3,7 @@ export function createHostBridge({
   window,
   getText,
   getTabId = () => null,
+  getDark = () => null,
   onNotice,
   onWindowState,
 }) {
@@ -36,7 +37,13 @@ export function createHostBridge({
     available: Boolean(embedded || webview),
     isNative: Boolean(webview),
     request(command, extra = {}) {
-      const payload = { text: getText(), ...(getTabId() ? { tabId: getTabId() } : {}), ...extra };
+      const dark = getDark();
+      const payload = {
+        text: getText(),
+        ...(getTabId() ? { tabId: getTabId() } : {}),
+        ...(typeof dark === 'boolean' ? { dark } : {}),
+        ...extra,
+      };
       if (embedded) {
         return embedded.request(command, payload);
       }
@@ -53,6 +60,13 @@ export function createHostBridge({
           reject(error);
         }
       });
+    },
+    notifySession(views) {
+      if (webview) {
+        webview.postMessage({ command: 'session-state', views });
+      } else if (embedded) {
+        embedded.request('session-state', { views }).catch(() => {});
+      }
     },
     notifyChange(text) {
       webview?.postMessage({

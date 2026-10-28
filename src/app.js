@@ -24,6 +24,10 @@ import { setupShortcuts } from './shortcuts.js';
 import { createPdfDocument } from './pdf-export.js';
 import { setupPdfSettings } from './pdf-settings.js';
 import { createTabBar } from './tab-bar.js';
+import { setupFolderWorkspace } from './folder-workspace.js';
+import { setupWorkspaceSearch } from './workspace-search.js';
+import { normalizeView } from './session-state.js';
+import './workspace-search.css';
 import welcome from './welcome.md';
 import '@milkdown/crepe/theme/common/style.css';
 import '@milkdown/crepe/theme/frame.css';
@@ -33,6 +37,7 @@ import './window-frame.css';
 import './settings.css';
 import './pdf-settings.css';
 import './tabs.css';
+import './workspace.css';
 
 let mdText = welcome;
 let diskText = welcome;
@@ -49,6 +54,8 @@ let recovery = null;
 let ready = false;
 let busy = false;
 let activeTabId = null;
+let sessionEnabled = false;
+let sessionTimer;
 let untitledCount = 0;
 const tabs = new Map();
 const subscribers = new Set();
@@ -57,20 +64,44 @@ const host = createHostBridge({
   window,
   getText: flush,
   getTabId: () => activeTabId,
+  getDark: () => document.body.classList.contains('dark'),
   onNotice: toast,
   onWindowState: updateWindowState,
 });
-const appearance = setupAppearance(() => source?.requestMeasure());
+const appearance = setupAppearance(() => {
+  source?.requestMeasure();
+  host.windowCommand('theme', { dark: document.body.classList.contains('dark') });
+});
 const pdfSettings = setupPdfSettings();
 const sourceExtensions = () =>
   createSourceExtensions({
     isSyncing: () => syncing,
     getMode: () => mode,
     onTextChange: updateText,
-    onSelectionChange: updateStatus,
+    onSelectionChange: () => {
+      updateStatus();
+      scheduleSession();
+    },
   });
 initializeIcons();
 setupWindowFrame(host);
+function showSidebar(panel) {
+  $$('[data-side]').forEach((button) =>
+    button.classList.toggle('selected', button.dataset.side === panel),
+  );
+  $('#outline').hidden = panel !== 'outline';
+  $('#recent').hidden = panel !== 'recent';
+  $('#workspace-panel').hidden = panel !== 'files';
+  $('#workspace-search-panel').hidden = panel !== 'search';
+}
+const workspaceSearch = setupWorkspaceSearch({ host, run: action, show: showSidebar });
+const folderWorkspace = setupFolderWorkspace({
+  host,
+  run: action,
+  show: showSidebar,
+  notice: toast,
+  onFolderChange: (folder) => workspaceSearch.setFolder(folder),
+});
 const renderTabs = createTabBar($('#document-tabs'), {
   select: (id) => action('select-tab', { targetId: id }),
   close: (id) => action('close-tab', { targetId: id }),
@@ -106,6 +137,9 @@ function captureTab() {
     writeScroll: $('#write-pane').scrollTop,
     previewScroll: $('#preview-pane').scrollTop,
     sourceScroll: source.scrollSnapshot(),
+    sourceTop: ['source', 'split'].includes(mode)
+      ? source.scrollDOM.scrollTop
+      : tabs.get(activeTabId)?.sourceTop || 0,
   });
 }
 
@@ -145,6 +179,78 @@ function activateTab(id) {
   $('#preview-pane').scrollTop = tab.previewScroll;
 }
 
+function sessionSnapshot() {
+  captureTab();
+  return [...tabs].map(([tabId, tab]) => ({
+    tabId,
+    view: normalizeView(
+      {
+        mode: tab.mode,
+        anchor: tab.sourceState.selection.main.anchor,
+        head: tab.sourceState.selection.main.head,
+        sourceTop: tab.sourceTop,
+        writeTop: tab.writeScroll,
+        previewTop: tab.previewScroll,
+      },
+      tab.mdText.length,
+    ),
+  }));
+}
+function scheduleSession() {
+  if (!sessionEnabled || !ready) {
+    return;
+  }
+  clearTimeout(sessionTimer);
+  sessionTimer = setTimeout(() => {
+    if (busy) {
+      scheduleSession();
+      return;
+    }
+    host.notifySession(sessionSnapshot());
+  }, 500);
+}
+async function restoreView(value) {
+  if (!value) {
+    return;
+  }
+  const view = normalizeView(value, mdText.length);
+  const sourceOnly =
+    mdText.length > 500000 ||
+    /^---\n[\s\S]*?\n---/.test(mdText) ||
+    /<(?:script|style|iframe|div|table)\b/i.test(mdText);
+  mode = sourceOnly && view.mode === 'write' ? 'source' : view.mode;
+  if (mode === 'source' || mode === 'split') {
+    setSource(mdText);
+  }
+  revealTab();
+  source.dispatch({ selection: { anchor: view.anchor, head: view.head } });
+  await new Promise(requestAnimationFrame);
+  await new Promise(requestAnimationFrame);
+  source.scrollDOM.scrollTop = view.sourceTop;
+  $('#write-pane').scrollTop = view.writeTop;
+  $('#preview-pane').scrollTop = view.previewTop;
+}
+function jumpToSearchHit(hit) {
+  setSource(mdText);
+  mode = 'source';
+  revealTab();
+  const line = source.state.doc.line(Math.max(1, Math.min(source.state.doc.lines, hit.line)));
+  let from = line.from + Math.min(line.length, hit.column);
+  if (mdText.slice(from, from + hit.length) !== hit.match) {
+    const nearby = line.text.indexOf(hit.match);
+    if (nearby >= 0) {
+      from = line.from + nearby;
+    } else {
+      from = line.from;
+      toast('内容已变化，已定位到原行；请重新搜索。');
+    }
+  }
+  source.dispatch({
+    selection: { anchor: from, head: Math.min(mdText.length, from + hit.length) },
+    effects: EditorView.scrollIntoView(from, { y: 'center' }),
+  });
+  source.focus();
+}
 async function openTab(data) {
   const id = data.id || crypto.randomUUID();
   if (tabs.has(id)) {
@@ -155,6 +261,7 @@ async function openTab(data) {
   activeTabId = id;
   mode = 'write';
   await loadDocument({ ...data, id, assetBase: data.assetBase || '' });
+  await restoreView(data.view);
   captureTab();
   revealTab();
 }
@@ -213,6 +320,22 @@ function toast(message) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => ($('#toast').hidden = true), 4200);
 }
+function confirmInApp(title, message, label) {
+  const dialog = $('#confirm-dialog');
+  if (dialog.open) {
+    return Promise.resolve(false);
+  }
+  $('#confirm-title').textContent = title;
+  $('#confirm-message').textContent = message;
+  $('#confirm-submit').textContent = label;
+  dialog.returnValue = 'cancel';
+  return new Promise((resolve) => {
+    dialog.addEventListener('close', () => resolve(dialog.returnValue === 'confirm'), {
+      once: true,
+    });
+    dialog.showModal();
+  });
+}
 function richDoc() {
   return rich?.editor.action((ctx) => ctx.get(editorViewCtx).state.doc);
 }
@@ -225,6 +348,7 @@ function updateText(text) {
   updateStatus();
   clearTimeout(paintTimer);
   paintTimer = setTimeout(paint, 130);
+  scheduleSession();
   if (host.isNative) {
     host.notifyChange(mdText);
   } else {
@@ -252,6 +376,7 @@ function flush() {
 }
 function updateStatus() {
   updateTabs();
+  folderWorkspace.setActive(metadata.path);
   const dirty = mdText !== diskText;
   document.body.classList.toggle('dirty', dirty);
   $('#document-name').textContent = metadata.name;
@@ -338,7 +463,7 @@ function setRich(text) {
   }
 }
 async function setMode(next) {
-  if (!ready || !['write', 'source', 'split', 'read'].includes(next) || mode === next) {
+  if (!ready || busy || !['write', 'source', 'split', 'read'].includes(next) || mode === next) {
     return;
   }
   flush();
@@ -352,6 +477,7 @@ async function setMode(next) {
     setSource(mdText);
   }
   mode = next;
+  scheduleSession();
   document.body.dataset.mode = mode;
   $$('.view-switch button').forEach((b) => b.classList.toggle('selected', b.dataset.mode === mode));
   paint();
@@ -481,13 +607,15 @@ function format(kind) {
   source.dispatch({ changes: { from: first.from, to: last.to, insert: replacement } });
   source.focus();
 }
-async function uploadImage(file) {
+function validateImage(file) {
   if (!/^image\/(png|jpeg|gif|webp)$/.test(file.type)) {
     throw Error('请选择 PNG、JPEG、GIF 或 WebP 图片。');
   }
-  if (file.size > 4 * 1024 * 1024) {
-    throw Error('单张图片请小于 4 MB。');
+  if (!file.size || file.size > 10 * 1024 * 1024) {
+    throw Error('图片不能为空，单张图片不能超过 10 MB。');
   }
+}
+function readImage(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result);
@@ -495,6 +623,248 @@ async function uploadImage(file) {
     reader.readAsDataURL(file);
   });
 }
+function setImageBusy(value) {
+  busy = value;
+  for (const element of [$('.workspace'), $('.app-header'), $('.window-controls')]) {
+    element.inert = value;
+  }
+  $('#image-progress').hidden = !value;
+}
+async function imageDestination() {
+  if (host.isNative && !metadata.path) {
+    toast('请先保存文档，以便将图片放在文档旁边。');
+    const saved = await host.request('save');
+    if (!saved) {
+      toast('已取消插入图片。');
+      return false;
+    }
+    markSaved(saved);
+    await folderWorkspace.refresh();
+  }
+  return true;
+}
+async function storeImage(file) {
+  const data = await readImage(file);
+  if (!host.isNative) {
+    return data;
+  }
+  const result = await host.request('import-image', {
+    mime: file.type,
+    base64: data.slice(data.indexOf(',') + 1),
+  });
+  if (!result?.path) {
+    throw Error('图片保存失败。');
+  }
+  return result.path;
+}
+async function chooseNativeImages(multiple) {
+  if (!ready || busy) {
+    return [];
+  }
+  const files = [];
+  setImageBusy(true);
+  try {
+    const selection = await host.request('choose-images', { multiple });
+    if (!selection) {
+      return [];
+    }
+    for (const item of selection.files) {
+      const result = await host.request('read-chosen-image', { token: item.token });
+      const binary = atob(result.base64);
+      const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+      files.push(new File([bytes], item.name, { type: item.mime }));
+    }
+  } catch (error) {
+    toast(error.message || String(error));
+    return [];
+  } finally {
+    setImageBusy(false);
+  }
+  return files;
+}
+function imageMarkdown(file, path) {
+  const name = (file.name || '图片')
+    .replaceAll('[', ' ')
+    .replaceAll(']', ' ')
+    .replaceAll('\\', ' ')
+    .replace(/[\r\n]/g, ' ')
+    .slice(0, 120);
+  return `![${name}](${path})`;
+}
+async function importImages(files) {
+  if (!ready || busy || mode === 'read' || !files.length) {
+    return;
+  }
+  const results = [];
+  let acquired = false;
+  try {
+    files.forEach(validateImage);
+    setImageBusy(true);
+    acquired = true;
+    if (!(await imageDestination())) {
+      return;
+    }
+    for (const file of files) {
+      results.push(imageMarkdown(file, await storeImage(file)));
+    }
+  } catch (error) {
+    toast((results.length ? `已插入 ${results.length} 张，其余图片未完成：` : '') + error.message);
+  } finally {
+    if (acquired) {
+      setImageBusy(false);
+    }
+    if (results.length) {
+      const markdown = results.join('\n\n');
+      textInsert(markdown, markdown.length, markdown.length);
+    } else if (acquired) {
+      window.FieldMarkdown.focus();
+    }
+  }
+}
+// Crepe's own image picker applies the returned URL to its image node in a microtask.
+async function uploadImage(file) {
+  let acquired = false;
+  try {
+    if (!ready || busy) {
+      throw Error('请等待当前操作完成。');
+    }
+    validateImage(file);
+    setImageBusy(true);
+    acquired = true;
+    if (!(await imageDestination())) {
+      return '';
+    }
+    return await storeImage(file);
+  } catch (error) {
+    toast(error.message);
+    return '';
+  } finally {
+    if (acquired) {
+      setTimeout(() => setImageBusy(false), 0);
+    }
+  }
+}
+function editorForTransfer(target) {
+  if (!(target instanceof Element)) {
+    return null;
+  }
+  if (mode === 'write' && target.closest('#write-pane')) {
+    return $('#write-pane');
+  }
+  if ((mode === 'source' || mode === 'split') && target.closest('#source-pane')) {
+    return $('#source-pane');
+  }
+  return null;
+}
+function positionForDrop(event) {
+  if (mode === 'write') {
+    rich.editor.action((ctx) => {
+      const view = ctx.get(editorViewCtx);
+      const location = view.posAtCoords({ left: event.clientX, top: event.clientY });
+      if (location) {
+        const selection = view.state.selection.constructor.near(
+          view.state.doc.resolve(location.pos),
+        );
+        view.dispatch(view.state.tr.setSelection(selection));
+      }
+    });
+  } else {
+    const position = source.posAtCoords({ x: event.clientX, y: event.clientY });
+    if (position !== null) {
+      source.dispatch({ selection: { anchor: position } });
+    }
+  }
+}
+function transferFiles(transfer) {
+  return [...(transfer?.files || [])];
+}
+document.addEventListener(
+  'click',
+  async (event) => {
+    const input = event.target;
+    if (
+      !host.isNative ||
+      !(input instanceof HTMLInputElement) ||
+      input.type !== 'file' ||
+      !input.closest('#rich-editor')
+    ) {
+      return;
+    }
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    const files = await chooseNativeImages(false);
+    if (files.length && input.isConnected) {
+      const transfer = new DataTransfer();
+      transfer.items.add(files[0]);
+      input.files = transfer.files;
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  },
+  true,
+);
+document.addEventListener(
+  'paste',
+  (event) => {
+    const files = transferFiles(event.clipboardData);
+    if (!editorForTransfer(event.target) || !files.some((file) => file.type.startsWith('image/'))) {
+      return;
+    }
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    importImages(files);
+  },
+  true,
+);
+document.addEventListener(
+  'dragover',
+  (event) => {
+    if (!event.dataTransfer?.types.includes('Files')) {
+      return;
+    }
+    event.preventDefault();
+    const editor = editorForTransfer(event.target);
+    $$('.image-drop-target').forEach((element) =>
+      element.classList.toggle('image-drop-target', element === editor),
+    );
+    if (editor && !busy) {
+      editor.classList.add('image-drop-target');
+      event.dataTransfer.dropEffect = 'copy';
+    } else {
+      event.dataTransfer.dropEffect = 'none';
+    }
+  },
+  true,
+);
+document.addEventListener(
+  'dragleave',
+  (event) => {
+    if (!event.relatedTarget || !editorForTransfer(event.relatedTarget)) {
+      $$('.image-drop-target').forEach((element) => element.classList.remove('image-drop-target'));
+    }
+  },
+  true,
+);
+document.addEventListener(
+  'drop',
+  (event) => {
+    const files = transferFiles(event.dataTransfer);
+    if (!files.length) {
+      return;
+    }
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    $$('.image-drop-target').forEach((element) => element.classList.remove('image-drop-target'));
+    if (!editorForTransfer(event.target)) {
+      toast('请将图片拖入正文编辑区。');
+      return;
+    }
+    if (!busy) {
+      positionForDrop(event);
+      importImages(files);
+    }
+  },
+  true,
+);
 function download(name, text, type) {
   const url = URL.createObjectURL(new Blob([text], { type }));
   const a = document.createElement('a');
@@ -504,7 +874,7 @@ function download(name, text, type) {
   setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
 async function action(name, extra = {}) {
-  if (!ready) {
+  if (!ready || busy) {
     return;
   }
   if (name === 'theme') {
@@ -523,21 +893,55 @@ async function action(name, extra = {}) {
     $('#settings-dialog').showModal();
     return;
   }
+  if (name === 'workspace-search') {
+    workspaceSearch.open();
+    return;
+  }
   if (name === 'find') {
     await setMode('source');
     openSearchPanel(source);
     return;
   }
   if (name === 'image') {
-    $('#image-input').click();
-    return;
-  }
-  if (busy) {
+    if (host.isNative) {
+      const files = await chooseNativeImages(true);
+      if (files.length) {
+        await importImages(files);
+      }
+    } else {
+      $('#image-input').dataset.tabId = activeTabId;
+      $('#image-input').click();
+    }
     return;
   }
   flush();
   busy = true;
   try {
+    if (name.startsWith('workspace:')) {
+      if (!host.available) {
+        throw new Error('请在页核桌面版中使用文件夹工作区。');
+      }
+      const result = await host.request(name, extra);
+      if (result?.document) {
+        await openTab(result.document);
+        if (extra.searchHit) {
+          jumpToSearchHit(extra.searchHit);
+        }
+      }
+      if (name === 'workspace:rename' && result) {
+        for (const change of result.documents) {
+          if (change.id === activeTabId) {
+            metadata = { ...metadata, ...change };
+          } else if (tabs.has(change.id)) {
+            const tab = tabs.get(change.id);
+            tab.metadata = { ...tab.metadata, ...change };
+          }
+        }
+        renderRecent(result.recent || []);
+        paint();
+      }
+      return result;
+    }
     if (name === 'select-tab' || name === 'next-tab' || name === 'previous-tab') {
       const ids = [...tabs.keys()];
       const offset = name === 'previous-tab' ? -1 : 1;
@@ -559,7 +963,11 @@ async function action(name, extra = {}) {
         }
       } else if (
         mdText !== diskText &&
-        !confirm('“' + metadata.name + '”有未保存的更改。关闭此标签页并放弃更改？')
+        !(await confirmInApp(
+          '关闭文档？',
+          '“' + metadata.name + '”有未保存的更改，关闭后这些更改将被放弃。',
+          '不保存并关闭',
+        ))
       ) {
         return;
       }
@@ -656,6 +1064,7 @@ async function action(name, extra = {}) {
         if (name === 'save' || name === 'save-as') {
           markSaved(result);
           toast('已保存 · ' + metadata.name);
+          await folderWorkspace.refresh();
         } else {
           for (const document of result.documents || [result]) {
             await openTab(document);
@@ -685,9 +1094,13 @@ async function action(name, extra = {}) {
     }
   } catch (e) {
     toast(e.message || String(e));
+    if (name.startsWith('workspace:')) {
+      return { error: e.message || String(e) };
+    }
   } finally {
     persistBrowserDrafts();
     busy = false;
+    scheduleSession();
   }
 }
 document.addEventListener('click', (e) => {
@@ -723,14 +1136,7 @@ document.addEventListener('click', (e) => {
   }
 });
 $$('[data-format]').forEach((b) => b.addEventListener('mousedown', (e) => e.preventDefault()));
-$$('[data-side]').forEach(
-  (b) =>
-    (b.onclick = () => {
-      $$('[data-side]').forEach((x) => x.classList.toggle('selected', x === b));
-      $('#outline').hidden = b.dataset.side !== 'outline';
-      $('#recent').hidden = b.dataset.side !== 'recent';
-    }),
-);
+$$('[data-side]').forEach((b) => (b.onclick = () => showSidebar(b.dataset.side)));
 $('#close-help').onclick = () => $('#help-dialog').close();
 $('#restore-draft').onclick = () => action('restore');
 $('#dismiss-draft').onclick = () => {
@@ -748,6 +1154,7 @@ const shortcuts = setupShortcuts({
   run: (id) => (['bold', 'italic'].includes(id) ? format(id) : action(id)),
   canRun: (id) =>
     ready &&
+    !busy &&
     (!['bold', 'italic'].includes(id) ||
       !!document.activeElement?.closest('.ProseMirror,.cm-content')),
 });
@@ -785,18 +1192,22 @@ $('#open-input').onchange = async (e) => {
   e.target.value = '';
 };
 $('#image-input').onchange = async (e) => {
-  const file = e.target.files[0];
-  if (!file) {
+  const files = [...e.target.files];
+  if (!files.length) {
     return;
   }
-  try {
-    textInsert(`![${file.name.replace(/[[\]]/g, '')}](${await uploadImage(file)})`);
-  } catch (err) {
-    toast(err.message);
+  if (e.target.dataset.tabId !== activeTabId) {
+    toast('文档已切换，请重新选择图片。');
+  } else {
+    await importImages(files);
   }
   e.target.value = '';
 };
+document.addEventListener('scroll', scheduleSession, { capture: true, passive: true });
 window.addEventListener('beforeunload', (e) => {
+  if (sessionEnabled) {
+    host.notifySession(sessionSnapshot());
+  }
   captureTab();
   if (!host.isNative && [...tabs.values()].some((tab) => tab.mdText !== tab.diskText)) {
     e.preventDefault();
@@ -846,7 +1257,14 @@ async function initialize() {
   ready = true;
   if (host.available) {
     const data = await host.request('ready');
-    await openTab(data.document);
+    for (const document of data.documents || [data.document]) {
+      await openTab(document);
+    }
+    if (data.activeId && tabs.has(data.activeId)) {
+      activateTab(data.activeId);
+    }
+    sessionEnabled = Boolean(data.sessionSupported);
+    await folderWorkspace.setFolder(data.folder || null);
     recovery = data.recovery;
     $('#connection').textContent = '本地文件已连接';
   } else {
@@ -865,15 +1283,31 @@ async function initialize() {
 }
 window.FieldMarkdown = {
   flush,
-  flushAll: () => {
+  flushAll: (includeView = false) => {
     captureTab();
-    return [...tabs].map(([id, tab]) => ({ tabId: id, text: tab.mdText }));
+    const views = new Map(sessionSnapshot().map((entry) => [entry.tabId, entry.view]));
+    return [...tabs].map(([id, tab]) => ({
+      tabId: id,
+      text: tab.mdText,
+      ...(includeView ? { view: views.get(id) } : {}),
+    }));
   },
   markSaved,
+  sessionSnapshot,
   getMarkdown: () => flush(),
   setDocument: async (data) => {
     await window.FieldMarkdown.ready;
-    if (flush() !== diskText && !confirm('替换当前未保存的文档？')) {
+    if (busy) {
+      return false;
+    }
+    if (
+      flush() !== diskText &&
+      !(await confirmInApp(
+        '替换文档？',
+        '当前文档有未保存的更改，替换后这些更改将被放弃。',
+        '替换文档',
+      ))
+    ) {
       return false;
     }
     await loadDocument(data);

@@ -52,7 +52,7 @@ namespace FieldNotes
             catch (Exception ex)
             {
                 File.WriteAllText(Path.Combine(Program.Data, "error.log"), ex.ToString());
-                MessageBox.Show(this, "编辑器加载失败：" + ex.Message, "页核 · PAGECORE");
+                PagePrompt.Ask(this, "编辑器加载失败", ex.Message, "知道了", null, darkTheme);
                 allowClose = true;
                 Close();
             }

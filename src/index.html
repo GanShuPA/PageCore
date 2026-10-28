@@ -92,11 +92,109 @@
             <span data-icon="folder"></span>
             打开文件
           </button>
+          <button
+            class="open-workspace"
+            data-workspace="choose"
+            title="打开一个本地文件夹作为工作区"
+          >
+            <span data-icon="folder"></span>
+            打开文件夹
+          </button>
         </div>
         <div class="sidebar-tabs">
+          <button data-side="files">文件</button>
           <button class="selected" data-side="outline">文档大纲</button>
           <button data-side="recent">最近文件</button>
+          <button
+            data-side="search"
+            data-action="workspace-search"
+            title="工作区全文搜索 Ctrl+Shift+F"
+          >
+            搜索
+          </button>
         </div>
+        <section id="workspace-panel" aria-label="文件夹工作区" hidden>
+          <div class="workspace-empty">
+            <span class="tiny-label">FOLDER / LOCAL</span>
+            <p>
+              将一个文件夹作为工作区，
+              <br />
+              让文档各归其位。
+            </p>
+            <button data-workspace="choose">
+              <span data-icon="folder"></span>
+              打开文件夹
+            </button>
+            <small>文件保存在原来的位置</small>
+          </div>
+          <div id="folder-content" hidden>
+            <button id="workspace-root" title="选择工作区根目录"></button>
+            <div class="workspace-tools" role="group" aria-label="工作区操作">
+              <button
+                data-workspace="create-file"
+                title="在选中文件夹中新建文档"
+                aria-label="工作区新建文档"
+                data-icon="plus"
+              ></button>
+              <button
+                data-workspace="create-folder"
+                title="在选中文件夹中新建文件夹"
+                aria-label="工作区新建文件夹"
+                data-icon="folder"
+              ></button>
+              <button
+                data-workspace="rename"
+                title="重命名选中的文档"
+                aria-label="重命名文档"
+                data-icon="rename"
+                disabled
+              ></button>
+              <span></span>
+              <button
+                data-workspace="refresh"
+                title="刷新文件树"
+                aria-label="刷新工作区"
+                data-icon="refresh"
+              ></button>
+              <button
+                data-workspace="close"
+                title="关闭工作区（保留打开的文档）"
+                aria-label="关闭工作区"
+                data-icon="close"
+              ></button>
+            </div>
+            <div id="workspace-tree-scroll">
+              <ul id="workspace-tree" role="tree" aria-label="工作区文件"></ul>
+            </div>
+            <p id="workspace-status" role="status" aria-live="polite"></p>
+          </div>
+        </section>
+        <section id="workspace-search-panel" aria-label="工作区全文搜索" hidden>
+          <form id="workspace-search-form">
+            <label for="workspace-query">在工作区中搜索</label>
+            <div class="search-query-row">
+              <input
+                id="workspace-query"
+                type="search"
+                maxlength="200"
+                placeholder="输入关键词…"
+                autocomplete="off"
+              />
+              <button type="submit">搜索</button>
+            </div>
+            <div class="search-options">
+              <label>
+                <input id="workspace-match-case" type="checkbox" />
+                区分大小写
+              </label>
+              <button type="button" id="workspace-search-stop" hidden>停止</button>
+            </div>
+          </form>
+          <p id="workspace-search-status" role="status" aria-live="polite">
+            请先打开文件夹工作区。
+          </p>
+          <div id="workspace-results" aria-label="搜索结果"></div>
+        </section>
         <nav id="outline" aria-label="文档大纲"></nav>
         <nav id="recent" aria-label="最近文件" hidden></nav>
         <div class="sidebar-bottom">
@@ -421,6 +519,44 @@
       <p id="word-export-warning-text"></p>
       <form method="dialog"><button class="primary">知道了</button></form>
     </dialog>
+    <dialog id="confirm-dialog" aria-labelledby="confirm-title" aria-describedby="confirm-message">
+      <form method="dialog">
+        <div class="confirm-kicker">
+          <span></span>
+          PAGECORE / CONFIRM
+        </div>
+        <h2 id="confirm-title">确认操作</h2>
+        <p id="confirm-message"></p>
+        <div class="confirm-actions">
+          <button value="cancel">取消</button>
+          <button value="confirm" class="primary" id="confirm-submit">继续</button>
+        </div>
+      </form>
+    </dialog>
+    <dialog id="workspace-dialog" aria-labelledby="workspace-dialog-title">
+      <form id="workspace-form">
+        <div class="dialog-heading">
+          <span class="tiny-label">WORKSPACE / LOCAL</span>
+          <button type="button" id="workspace-cancel-x" aria-label="取消">×</button>
+        </div>
+        <h2 id="workspace-dialog-title">新建文档</h2>
+        <p id="workspace-location"></p>
+        <label for="workspace-name">名称</label>
+        <input
+          id="workspace-name"
+          autocomplete="off"
+          maxlength="200"
+          required
+          aria-describedby="workspace-name-hint workspace-error"
+        />
+        <p id="workspace-name-hint">文档支持 .md、.markdown、.txt；没有扩展名时自动添加 .md。</p>
+        <p id="workspace-error" role="alert"></p>
+        <div class="workspace-dialog-actions">
+          <button type="button" id="workspace-cancel">取消</button>
+          <button type="submit" class="primary" id="workspace-submit">创建</button>
+        </div>
+      </form>
+    </dialog>
     <dialog id="help-dialog">
       <div class="dialog-heading">
         <span class="tiny-label">QUICK GUIDE / 01</span>
@@ -455,8 +591,15 @@
     </dialog>
     <div id="toast" role="status" hidden></div>
     <div id="loading">正在准备写作空间…</div>
+    <div id="image-progress" role="status" aria-live="polite" hidden>正在处理图片…</div>
     <input id="open-input" type="file" accept=".md,.markdown,.txt" hidden />
-    <input id="image-input" type="file" accept="image/png,image/jpeg,image/gif,image/webp" hidden />
+    <input
+      id="image-input"
+      type="file"
+      accept="image/png,image/jpeg,image/gif,image/webp"
+      multiple
+      hidden
+    />
     <script src="app.js"></script>
   </body>
 </html>

@@ -24,8 +24,8 @@ test('recover multiple drafts as separate tabs and remove a discarded draft', as
   await expect(page.locator('.document-tab.unsaved')).toHaveCount(2);
   await page.getByRole('tab', { name: '草稿甲.md，未保存', exact: true }).click();
   await expect(page.locator('.ProseMirror')).toContainText('草稿甲');
-  page.once('dialog', (dialog) => dialog.accept());
   await page.keyboard.press('Control+W');
+  await page.locator('#confirm-submit').click();
   await expect(page.getByRole('tab')).toHaveCount(2);
   expect(
     await page.evaluate(() =>
@@ -101,17 +101,19 @@ test('rich text history stays isolated; cancelling a close preserves both docume
   await expect(page.locator('.ProseMirror')).toHaveText('原文');
   await page.keyboard.press('Control+Tab');
   await expect(page.locator('.ProseMirror')).toHaveText('second');
-  page.once('dialog', (dialog) => dialog.dismiss());
   await page.keyboard.press('Control+W');
+  await page.locator('#confirm-dialog button[value="cancel"]').click();
   await expect(page.getByRole('tab')).toHaveCount(2);
   await expect(page.locator('.ProseMirror')).toHaveText('second');
-  page.once('dialog', (dialog) => dialog.accept());
   await page.keyboard.press('Control+W');
+  await page.locator('#confirm-submit').click();
   await expect(page.getByRole('tab')).toHaveCount(1);
   await expect(page.locator('.ProseMirror')).toHaveText('原文');
   // Rich serialization adds a final newline, so undo may still differ from the original input.
-  page.once('dialog', (dialog) => dialog.accept());
   await page.keyboard.press('Control+W');
+  if (await page.locator('#confirm-dialog').isVisible()) {
+    await page.locator('#confirm-submit').click();
+  }
   await expect(page.getByRole('tab')).toHaveCount(1);
   await expect(page.locator('.ProseMirror')).toHaveText('');
 });

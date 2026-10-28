@@ -121,6 +121,13 @@ namespace FieldNotes
             return ext == ".md" || ext == ".markdown" || ext == ".txt";
         }
 
+        // A filesystem rename changes identity only, never editor contents or the saved baseline.
+        public void Relocate(string path)
+        {
+            PathName = Path.GetFullPath(path);
+            Name = Path.GetFileName(PathName);
+        }
+
         public bool HasExternalChanges()
         {
             return PathName != null
