@@ -18,7 +18,7 @@ try {
     }
     $releaseBin = Join-Path $releaseRoot 'bin'
     New-Item -ItemType Directory -Force -Path $releaseBin | Out-Null
-    foreach ($binary in @('PageCore.exe', 'PageCore.exe.config', 'Microsoft.Web.WebView2.Core.dll', 'Microsoft.Web.WebView2.WinForms.dll', 'WebView2Loader.dll')) {
+    foreach ($binary in @('PageCore.exe', 'PageCore.Updater.exe', 'PageCore.exe.config', 'Microsoft.Web.WebView2.Core.dll', 'Microsoft.Web.WebView2.WinForms.dll', 'WebView2Loader.dll')) {
         Copy-Item -LiteralPath (Join-Path $projectRoot "bin\$binary") -Destination $releaseBin
     }
     $archive = Join-Path $packageOutput "PageCore-v$version-windows-x64.zip"

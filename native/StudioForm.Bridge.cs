@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Windows.Forms;
@@ -147,6 +147,18 @@ namespace FieldNotes
                     File.WriteAllText(
                         Path.Combine(Program.Data, "ui-ready.txt"),
                         DateTime.UtcNow.ToString("o")
+                    );
+                    return;
+                }
+                if (command != null && command.StartsWith("update:", StringComparison.Ordinal))
+                {
+                    Send(
+                        new
+                        {
+                            id = id,
+                            ok = true,
+                            data = await UpdateCommand(command),
+                        }
                     );
                     return;
                 }

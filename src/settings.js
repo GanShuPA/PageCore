@@ -75,7 +75,14 @@ export function setupSettingsTabs(shortcuts) {
         e.preventDefault();
         const tabs = $$('[data-settings-tab]');
         const next =
-          e.key === 'Home' ? tabs[0] : e.key === 'End' ? tabs.at(-1) : tabs.find((b) => b !== tab);
+          e.key === 'Home'
+            ? tabs[0]
+            : e.key === 'End'
+              ? tabs.at(-1)
+              : tabs[
+                  (tabs.indexOf(tab) + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) %
+                    tabs.length
+                ];
         selectSettingsTab(next);
         next.focus();
       }

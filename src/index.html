@@ -13,18 +13,24 @@
   </head>
   <body data-mode="write">
     <header class="app-header">
+      <button
+        id="sidebar-toggle"
+        title="收起侧栏"
+        aria-label="收起侧栏"
+        aria-expanded="true"
+        aria-controls="sidebar"
+        data-icon="sidebar"
+      ></button>
       <div class="brand">
         <img class="brand-icon" src="field-notes.svg" alt="页核 · PAGECORE" />
         <b>
           页核
           <span>PAGECORE</span>
         </b>
-        <small>MARKDOWN STUDIO</small>
       </div>
-      <div class="file-heading">
-        <span id="dirty-dot"></span>
-        <b id="document-name">欢迎使用.md</b>
-        <span id="save-state">准备就绪</span>
+      <div class="breadcrumb">
+        <span data-icon="file"></span>
+        <span id="document-path">本地工作空间 / 欢迎使用.md</span>
       </div>
       <div class="header-actions">
         <button
@@ -51,6 +57,28 @@
           <span data-icon="save"></span>
           保存
         </button>
+        <div class="export-control">
+          <button
+            id="export-toggle"
+            aria-haspopup="menu"
+            aria-expanded="false"
+            aria-controls="export-menu"
+            title="导出与另存为"
+          >
+            导出
+            <span data-icon="chevron"></span>
+          </button>
+          <div id="export-menu" role="menu" aria-label="导出与另存为" hidden>
+            <span class="menu-caption">导出当前文档</span>
+            <button role="menuitem" data-action="export-pdf">导出 PDF</button>
+            <button role="menuitem" data-action="export-word">导出 Word</button>
+            <button role="menuitem" data-action="export">导出 HTML</button>
+            <div class="menu-divider" role="separator"></div>
+            <button role="menuitem" data-action="save-as" title="另存为 Ctrl+Shift+S">
+              另存为 Markdown
+            </button>
+          </div>
+        </div>
       </div>
     </header>
     <div class="window-controls" role="group" aria-label="窗口控制">
@@ -78,35 +106,37 @@
       <i data-resize="se"></i>
     </div>
     <div class="workspace">
+      <button id="sidebar-dismiss" aria-label="收起侧栏" tabindex="-1" hidden></button>
       <aside id="sidebar">
         <div class="sidebar-top">
           <span>工作空间</span>
-          <small>01 / LOCAL</small>
+          <small>LOCAL</small>
         </div>
         <div class="file-actions">
           <button data-action="new">
             <span data-icon="plus"></span>
-            新建文档
+            新建
           </button>
           <button data-action="open" title="打开 Ctrl+O">
             <span data-icon="folder"></span>
-            打开文件
+            打开
           </button>
           <button
             class="open-workspace"
             data-workspace="choose"
-            title="打开一个本地文件夹作为工作区"
+            title="打开文件夹作为工作区"
+            aria-label="打开文件夹作为工作区"
           >
             <span data-icon="folder"></span>
-            打开文件夹
           </button>
         </div>
         <div class="sidebar-tabs">
-          <button data-side="files">文件</button>
-          <button class="selected" data-side="outline">文档大纲</button>
-          <button data-side="recent">最近文件</button>
+          <button data-side="files" aria-pressed="false">文件</button>
+          <button class="selected" data-side="outline" aria-pressed="true">大纲</button>
+          <button data-side="recent" aria-pressed="false">最近</button>
           <button
             data-side="search"
+            aria-pressed="false"
             data-action="workspace-search"
             title="工作区全文搜索 Ctrl+Shift+F"
           >
@@ -198,8 +228,6 @@
         <nav id="outline" aria-label="文档大纲"></nav>
         <nav id="recent" aria-label="最近文件" hidden></nav>
         <div class="sidebar-bottom">
-          <span class="tiny-label">WRITE / THINK / BUILD</span>
-          <p>把想法，写成下一步。</p>
           <button data-action="help">
             <span data-icon="help"></span>
             使用指南与快捷键
@@ -217,10 +245,48 @@
             data-icon="plus"
           ></button>
         </div>
-        <div class="document-bar">
-          <div class="breadcrumb">
-            <span data-icon="file"></span>
-            <span id="document-path">本地工作空间 / 欢迎使用.md</span>
+        <div class="editor-tools">
+          <div class="toolbar" role="toolbar" aria-label="格式工具栏">
+            <button data-format="h1" title="一级标题">H₁</button>
+            <button data-format="h2" title="二级标题">H₂</button>
+            <i></i>
+            <button
+              data-format="bold"
+              class="shortcut-button"
+              aria-label="加粗，快捷键 Ctrl+B"
+              aria-keyshortcuts="Control+b"
+              aria-describedby="bold-tooltip"
+            >
+              <b>B</b>
+              <span class="shortcut-tooltip" id="bold-tooltip" role="tooltip">
+                加粗
+                <kbd>Ctrl+B</kbd>
+              </span>
+            </button>
+            <button
+              data-format="italic"
+              class="shortcut-button"
+              aria-label="斜体，快捷键 Ctrl+I"
+              aria-keyshortcuts="Control+i"
+              aria-describedby="italic-tooltip"
+            >
+              <em>I</em>
+              <span class="shortcut-tooltip" id="italic-tooltip" role="tooltip">
+                斜体
+                <kbd>Ctrl+I</kbd>
+              </span>
+            </button>
+            <button data-format="strike" title="删除线"><s>S</s></button>
+            <i></i>
+            <button data-format="bullet" title="无序列表" data-icon="list"></button>
+            <button data-format="task" title="任务列表" data-icon="check"></button>
+            <button data-format="quote" title="引用" data-icon="quote"></button>
+            <button data-format="code" title="代码块" data-icon="code"></button>
+            <button data-format="table" title="插入表格" data-icon="table"></button>
+            <button data-format="link" title="插入链接" data-icon="link"></button>
+            <button data-action="image" title="插入图片" data-icon="image"></button>
+
+            <button data-action="find" title="查找 / 替换 Ctrl+F" data-icon="search"></button>
           </div>
           <div class="view-switch" role="group" aria-label="编辑模式">
             <button data-mode="write" class="selected" title="直接编辑排版后的正文">写作</button>
@@ -228,64 +294,6 @@
             <button data-mode="source">源码</button>
             <button data-mode="read">阅读</button>
           </div>
-        </div>
-        <div class="toolbar" role="toolbar" aria-label="格式工具栏">
-          <button data-format="h1" title="一级标题">H₁</button>
-          <button data-format="h2" title="二级标题">H₂</button>
-          <i></i>
-          <button
-            data-format="bold"
-            class="shortcut-button"
-            aria-label="加粗，快捷键 Ctrl+B"
-            aria-keyshortcuts="Control+b"
-            aria-describedby="bold-tooltip"
-          >
-            <b>B</b>
-            <span class="shortcut-tooltip" id="bold-tooltip" role="tooltip">
-              加粗
-              <kbd>Ctrl+B</kbd>
-            </span>
-          </button>
-          <button
-            data-format="italic"
-            class="shortcut-button"
-            aria-label="斜体，快捷键 Ctrl+I"
-            aria-keyshortcuts="Control+i"
-            aria-describedby="italic-tooltip"
-          >
-            <em>I</em>
-            <span class="shortcut-tooltip" id="italic-tooltip" role="tooltip">
-              斜体
-              <kbd>Ctrl+I</kbd>
-            </span>
-          </button>
-          <button data-format="strike" title="删除线"><s>S</s></button>
-          <i></i>
-          <button data-format="bullet" title="无序列表" data-icon="list"></button>
-          <button data-format="task" title="任务列表" data-icon="check"></button>
-          <button data-format="quote" title="引用" data-icon="quote"></button>
-          <button data-format="code" title="代码块" data-icon="code"></button>
-          <button data-format="table" title="插入表格" data-icon="table"></button>
-          <button data-format="link" title="插入链接" data-icon="link"></button>
-          <button data-action="image" title="插入图片" data-icon="image"></button>
-          <span class="toolbar-space"></span>
-          <button data-action="find" title="查找 / 替换 Ctrl+F" data-icon="search"></button>
-          <button data-action="save-as" class="text-tool" title="另存为 Ctrl+Shift+S">
-            另存为
-          </button>
-          <button data-action="export" class="text-tool" title="导出带排版的 HTML">
-            导出 HTML
-          </button>
-          <button data-action="export-pdf" class="text-tool" title="设置排版并导出 PDF 文件">
-            导出 PDF
-          </button>
-          <button
-            data-action="export-word"
-            class="text-tool"
-            title="导出可编辑的 Word 文档 (.docx)"
-          >
-            导出 Word
-          </button>
         </div>
         <div id="recovery-banner" hidden>
           <span>发现上次未保存的草稿。</span>
@@ -320,6 +328,12 @@
           </section>
         </div>
         <footer class="statusbar">
+          <div class="file-heading">
+            <span id="dirty-dot"></span>
+            <b class="visually-hidden" id="document-name">欢迎使用.md</b>
+            <span id="save-state">准备就绪</span>
+          </div>
+
           <span>
             <i class="connection-dot"></i>
             <span id="connection">本地编辑</span>
@@ -361,6 +375,16 @@
           data-settings-tab="shortcuts-panel"
         >
           快捷键
+        </button>
+        <button
+          id="updates-tab"
+          role="tab"
+          aria-selected="false"
+          aria-controls="updates-panel"
+          data-settings-tab="updates-panel"
+          tabindex="-1"
+        >
+          关于与更新
         </button>
       </div>
       <section id="appearance-panel" role="tabpanel" aria-labelledby="appearance-tab">
@@ -405,6 +429,29 @@
         <div id="shortcut-list"></div>
         <p id="shortcut-status" role="status" aria-live="polite">更改即时生效，自动保存在本机。</p>
         <div class="shortcut-reset-row"><button id="reset-shortcuts">恢复默认快捷键</button></div>
+      </section>
+      <section id="updates-panel" role="tabpanel" aria-labelledby="updates-tab" hidden>
+        <h3>
+          页核 · PAGECORE
+          <span id="app-version"></span>
+        </h3>
+        <p>本地 Markdown 写作空间 · MIT License</p>
+        <label class="update-auto">
+          <input type="checkbox" id="update-auto" checked />
+          启动时自动检查正式版本
+        </label>
+        <p class="help-note">
+          仅向 GitHub 查询版本信息，不上传文档。下载后由你选择安装时间，重启前会检查未保存内容。
+        </p>
+        <p id="update-status" role="status" aria-live="polite">可手动检查新版本。</p>
+        <pre id="update-notes" hidden></pre>
+        <div class="update-actions">
+          <button id="update-check">检查更新</button>
+          <button id="update-download" hidden>下载更新</button>
+          <button id="update-cancel" hidden>取消</button>
+          <button id="update-install" class="primary" hidden>安装并重启</button>
+          <button id="update-home">项目与下载</button>
+        </div>
       </section>
       <button class="primary settings-done" id="done-settings">完成</button>
     </dialog>

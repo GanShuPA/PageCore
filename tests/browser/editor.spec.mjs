@@ -34,6 +34,7 @@ test('PDF export sends the latest text, preserves dirty state and recovers after
     await page.evaluate((value) => {
       window.pdfResult = value;
     }, outcome);
+    await page.locator('#export-toggle').click();
     await button.click();
     await page.locator('#pdf-submit').click();
     await expect(button).toBeEnabled();
@@ -73,6 +74,7 @@ test('PDF options validate margins, persist only after success and cancel withou
   await page.goto('/');
   await page.evaluate(() => window.FieldMarkdown.ready);
   const button = page.locator('[data-action="export-pdf"]');
+  await page.locator('#export-toggle').click();
   await button.click();
   const form = page.locator('#pdf-form');
   await form.locator('[name="paper"]').selectOption('A5');
@@ -101,12 +103,14 @@ test('PDF options validate margins, persist only after success and cancel withou
   expect(payload.html).toContain('size: A5 landscape');
   await page.reload();
   await page.evaluate(() => window.FieldMarkdown.ready);
+  await page.locator('#export-toggle').click();
   await button.click();
   await expect(form.locator('[name="paper"]')).toHaveValue('A5');
   await expect(form.locator('[name="header"]')).toHaveValue('中文页眉');
   await page.locator('#pdf-reset').click();
   await expect(form.locator('[name="fontSize"]')).toHaveValue('11');
   await page.keyboard.press('Escape');
+  await page.locator('#export-toggle').click();
   await button.click();
   await expect(form.locator('[name="paper"]')).toHaveValue('A5');
   await page.locator('#pdf-cancel').click();
@@ -154,6 +158,7 @@ test('Word export uses current content and keeps dirty state after cancellation,
     await page.evaluate((value) => {
       window.wordResult = value;
     }, result);
+    await page.locator('#export-toggle').click();
     await button.click();
     await expect(button).toHaveText('导出 Word');
     await expect(button).toBeEnabled();

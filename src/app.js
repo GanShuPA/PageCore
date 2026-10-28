@@ -26,6 +26,8 @@ import { setupPdfSettings } from './pdf-settings.js';
 import { createTabBar } from './tab-bar.js';
 import { setupFolderWorkspace } from './folder-workspace.js';
 import { setupWorkspaceSearch } from './workspace-search.js';
+import { setupUpdates } from './updates.js';
+import { setupLayout } from './layout.js';
 import { normalizeView } from './session-state.js';
 import './workspace-search.css';
 import welcome from './welcome.md';
@@ -38,6 +40,7 @@ import './settings.css';
 import './pdf-settings.css';
 import './tabs.css';
 import './workspace.css';
+import './layout.css';
 
 let mdText = welcome;
 let diskText = welcome;
@@ -73,6 +76,7 @@ const appearance = setupAppearance(() => {
   host.windowCommand('theme', { dark: document.body.classList.contains('dark') });
 });
 const pdfSettings = setupPdfSettings();
+const updates = setupUpdates({ host, notice: toast });
 const sourceExtensions = () =>
   createSourceExtensions({
     isSyncing: () => syncing,
@@ -85,10 +89,15 @@ const sourceExtensions = () =>
   });
 initializeIcons();
 setupWindowFrame(host);
-function showSidebar(panel) {
-  $$('[data-side]').forEach((button) =>
-    button.classList.toggle('selected', button.dataset.side === panel),
-  );
+const layout = setupLayout({ measure: () => source?.requestMeasure() });
+function showSidebar(panel, { reveal = true } = {}) {
+  if (reveal) {
+    layout.revealSidebar();
+  }
+  $$('[data-side]').forEach((button) => {
+    button.classList.toggle('selected', button.dataset.side === panel);
+    button.setAttribute('aria-pressed', String(button.dataset.side === panel));
+  });
   $('#outline').hidden = panel !== 'outline';
   $('#recent').hidden = panel !== 'recent';
   $('#workspace-panel').hidden = panel !== 'files';
@@ -382,6 +391,7 @@ function updateStatus() {
   $('#document-name').textContent = metadata.name;
   $('#save-state').textContent = dirty ? '未保存' : '已就绪';
   $('#document-path').textContent = metadata.path || '本地工作空间 / ' + metadata.name;
+  $('#document-path').title = $('#document-path').textContent;
   $('#encoding').textContent =
     (metadata.encoding || 'UTF-8').toUpperCase() + ' · ' + (metadata.eol || 'LF');
   $('#word-count').textContent = countWords(mdText).toLocaleString() + ' 字 / 词';
@@ -1264,7 +1274,7 @@ async function initialize() {
       activateTab(data.activeId);
     }
     sessionEnabled = Boolean(data.sessionSupported);
-    await folderWorkspace.setFolder(data.folder || null);
+    await folderWorkspace.setFolder(data.folder || null, { reveal: false });
     recovery = data.recovery;
     $('#connection').textContent = '本地文件已连接';
   } else {
@@ -1326,8 +1336,10 @@ window.FieldMarkdown = {
       ? rich?.editor.action((ctx) => ctx.get(editorViewCtx).focus())
       : source?.focus(),
 };
-window.FieldMarkdown.ready = initialize().catch((error) => {
-  $('#loading').textContent = '加载失败：' + error.message;
-  console.error(error);
-  throw error;
-});
+window.FieldMarkdown.ready = initialize()
+  .then(() => updates.start())
+  .catch((error) => {
+    $('#loading').textContent = '加载失败：' + error.message;
+    console.error(error);
+    throw error;
+  });

@@ -7,7 +7,7 @@ $archivePath = Join-Path $packageOutput "PageCore-v$version-windows-x64.zip"
 $zip = [IO.Compression.ZipFile]::OpenRead($archivePath)
 try {
     $entries = @($zip.Entries | ForEach-Object { $_.FullName.Replace('\', '/') })
-    foreach ($required in @('bin/PageCore.exe', 'bin/PageCore.exe.config', 'bin/Microsoft.Web.WebView2.Core.dll', 'bin/Microsoft.Web.WebView2.WinForms.dll', 'bin/WebView2Loader.dll', 'dist/index.html', 'dist/app.js', 'dist/app.css', 'dist/welcome.md', 'README.md', 'LICENSE', 'docs/CHANGELOG.md', 'dist/licenses/LICENSE-WebView2.txt', 'dist/licenses/THIRD-PARTY.json', 'dist/licenses/THIRD-PARTY-LICENSES.txt', '启动页核.cmd')) {
+    foreach ($required in @('bin/PageCore.exe', 'bin/PageCore.Updater.exe', 'bin/PageCore.exe.config', 'bin/Microsoft.Web.WebView2.Core.dll', 'bin/Microsoft.Web.WebView2.WinForms.dll', 'bin/WebView2Loader.dll', 'dist/index.html', 'dist/app.js', 'dist/app.css', 'dist/welcome.md', 'README.md', 'LICENSE', 'docs/CHANGELOG.md', 'dist/licenses/LICENSE-WebView2.txt', 'dist/licenses/THIRD-PARTY.json', 'dist/licenses/THIRD-PARTY-LICENSES.txt', '启动页核.cmd')) {
         if ($entries -notcontains "PageCore/$required") { throw "Missing release file: $required" }
     }
     if ($entries | Where-Object { $_ -match '(^|/)(\.runtime|\.git|node_modules|\.pnpm-store)(/|$)|(^|/)\.env|FieldNotes\.exe|(^|/)docs/local(/|$)|\.miora$|_assets/' }) { throw 'Unexpected development or private data in release' }

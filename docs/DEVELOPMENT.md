@@ -79,3 +79,11 @@ PowerShell 修改后可用 `Invoke-Formatter -Settings ./.config/PSScriptAnalyze
 ### 搜索与会话
 
 `WorkspaceSearch.cs` 在后台线程执行有界、可取消的本地文本搜索；`StudioForm.Session.cs` 管理搜索取消与会话桥接。`SessionStore.cs` 原子保存文件身份和视图状态，不保存已放弃的正文；正文恢复继续由 `recovery.json` 负责。`workspace-search.js` 用请求代次隔离过期结果，`session-state.js` 校验从磁盘恢复的编辑器位置。搜索和恢复边界由 `SearchSessionTests.cs` 与 `tests/browser/search-session.spec.mjs` 验证。
+
+## 更新模块
+
+`src/updates.js` 提供关于与更新交互；`native/UpdateService.cs` 从固定 GitHub 仓库检查正式 Release，限制下载体积，验证 SHA-256 与程序集版本。`native/UpdatePackage.cs` 验证压缩包路径和文件范围，仅允许程序资源文件，阻止 .runtime 和路径越界。
+
+`updater/UpdateInstaller.cs` 编译为 `bin/PageCore.Updater.exe`。宿主完成所有文档关闭确认后启动更新助手，助手等待宿主退出，再次校验安装包，逐文件备份与替换，异常时回滚，并重新启动页核。升级缓存和备份不随发行包分发。断电等强制中断无法保证自动回滚，请保留备份并用完整发布包修复。
+
+自动测试覆盖版本过滤、来源地址、完整性、路径穿越、保留用户数据、失败回滚，以及检查/下载/取消/安装界面状态。CI 同时检查 updater 目录的 C# 格式。

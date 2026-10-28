@@ -189,3 +189,31 @@
     width: 75px;
   }
 }
+
+#update-notes {
+  max-height: 180px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: 12px/1.8 var(--mono);
+  padding: 14px;
+  background: var(--bg);
+}
+.update-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.update-actions button {
+  border: 1px solid var(--line);
+  padding: 8px 12px;
+}
+.update-auto {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+#update-status {
+  overflow-wrap: anywhere;
+}

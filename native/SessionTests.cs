@@ -78,6 +78,7 @@ namespace FieldNotes
                 PageFileDialog.SelfTest(folder);
                 PagePrompt.SelfTest();
                 SearchSessionTests.Run(folder);
+                UpdateTests.Run(folder);
                 File.WriteAllText(
                     Path.Combine(Program.Data, "self-test.json"),
                     "{\"passed\":true,\"checks\":[\"five encodings\",\"exact no-edit roundtrip\",\"CRLF preservation\",\"external conflict\",\"atomic save\",\"new document\",\"extension guard\",\"PDF options and validation\"]}"

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -189,8 +189,15 @@ namespace FieldNotes
 
         async void OnClosing(object sender, FormClosingEventArgs e)
         {
+            if (updateCancellation != null)
+            {
+                e.Cancel = true;
+                Send(new { type = "notice", message = "请先取消或等待更新下载完成。" });
+                return;
+            }
             if (exportingPdf)
             {
+                updateInstall = false;
                 e.Cancel = true;
                 Send(new { type = "notice", message = "PDF 正在导出，请稍候再关闭。" });
                 return;
@@ -233,6 +240,8 @@ namespace FieldNotes
                     );
                 else if (File.Exists(DraftPath))
                     File.Delete(DraftPath);
+                if (updateInstall)
+                    UpdateService.Launch(updateStage);
                 allowClose = true;
                 BeginInvoke(new Action(Close));
             }
@@ -253,6 +262,7 @@ namespace FieldNotes
                 workspace.Select(previous);
                 ConfigureAssets();
                 UpdateTitle();
+                updateInstall = false;
                 closing = false;
             }
         }

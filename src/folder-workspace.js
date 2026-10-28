@@ -146,7 +146,7 @@ export function setupFolderWorkspace({ host, run, show, notice, onFolderChange =
     }
   }
 
-  async function setFolder(value) {
+  async function setFolder(value, { reveal = true } = {}) {
     generation++;
     folder = value;
     onFolderChange(folder);
@@ -162,7 +162,7 @@ export function setupFolderWorkspace({ host, run, show, notice, onFolderChange =
       $('#workspace-root').textContent = folder.name || folder.root;
       $('#workspace-root').title = folder.root;
       $('#workspace-status').textContent = '仅显示 .md / .markdown / .txt';
-      show('files');
+      show('files', { reveal });
       await load('');
     }
   }

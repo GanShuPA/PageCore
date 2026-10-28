@@ -2,6 +2,8 @@ import { $$ } from './dom.js';
 
 export function initializeIcons() {
   const icons = {
+    sidebar: 'M3 4h18v16H3zM9 4v16',
+    chevron: 'm7 10 5 5 5-5',
     plus: 'M12 4v16M4 12h16',
     folder: 'M3 7V4h7l3 3h8v13H3zM3 10h18',
     file: 'M5 2h9l5 5v15H5zM14 2v6h5M8 12h8M8 16h8',

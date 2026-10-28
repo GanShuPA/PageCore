@@ -31,7 +31,7 @@ jobs:
         run: |
           dotnet tool restore
           if ($LASTEXITCODE -ne 0) { throw 'Formatter restore failed' }
-          dotnet csharpier check native --config-path .config/csharpier.json
+          dotnet csharpier check native updater --config-path .config/csharpier.json
           if ($LASTEXITCODE -ne 0) { throw 'C# formatting check failed' }
           Install-Module PSScriptAnalyzer -RequiredVersion 1.24.0 -Scope CurrentUser -Force
           ./scripts/check-powershell.ps1
@@ -65,7 +65,7 @@ jobs:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           persist-credentials: false
-      - name: Download verified package and publish preview release
+      - name: Download verified package and publish release
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -78,5 +78,5 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Artifact download failed' }
           $notes = "docs/releases/v$version.md"
           if (!(Test-Path -LiteralPath $notes)) { throw 'Release notes are required' }
-          gh release create $env:RELEASE_TAG "release-assets/PageCore-v$version-windows-x64.zip" "release-assets/SHA256SUMS.txt" --title "页核 · PAGECORE v$version" --notes-file $notes --prerelease --verify-tag
+          gh release create $env:RELEASE_TAG "release-assets/PageCore-v$version-windows-x64.zip" "release-assets/SHA256SUMS.txt" --title "页核 · PAGECORE v$version" --notes-file $notes --latest --verify-tag
           if ($LASTEXITCODE -ne 0) { throw 'Release publication failed' }

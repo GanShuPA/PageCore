@@ -177,6 +177,7 @@ test('host routing saves only the active document and reopening an existing file
   await expect(page.getByRole('tab')).toHaveCount(2);
   await expect(page.locator('.cm-content')).toHaveText('甲的未保存修改');
   await expect(page.locator('#save-state')).toHaveText('未保存');
+  await page.locator('#export-toggle').click();
   await page.locator('[data-action="export-word"]').click();
   await expect(page.locator('#toast')).toContainText('Word 已导出');
   expect(await page.evaluate(() => window.tabCalls.at(-1))).toMatchObject({
